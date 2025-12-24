@@ -1,0 +1,41 @@
+# Binários
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Arquivos de teste
+*.test
+*.out
+
+# Dependências
+vendor/
+
+# Build cache do Go
+*.o
+*.a
+*.so
+
+# Arquivos de ambiente
+.env
+.env.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Coverage
+*.cover
+coverage.out
+
