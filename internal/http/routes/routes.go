@@ -20,5 +20,14 @@ func Setup() *chi.Mux {
 	r.Get("/health", handlers.HealthHandler) // Health check endpoint
 	r.Get("/test", handlers.TestHandler)
 
+	// Rotas de receitas
+	r.Route("/recipes", func(r chi.Router) {
+		r.Get("/", handlers.ListRecipes)
+		r.Post("/", handlers.CreateRecipe)
+		r.Get("/{id}", handlers.GetRecipe)
+		r.Put("/{id}", handlers.UpdateRecipe)
+		r.Delete("/{id}", handlers.DeleteRecipe)
+	})
+
 	return r
 }

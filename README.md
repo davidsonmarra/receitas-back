@@ -9,6 +9,8 @@ Este projeto estabelece a fundação para um serviço backend escrito em Go. A F
 ## 🔧 Tecnologias
 
 - **Go**: ≥ 1.22
+- **Database**: [PostgreSQL](https://www.postgresql.org/) - Database relacional
+- **ORM**: [GORM](https://gorm.io/) v1.31+ - ORM completo para Go
 - **Router**: [go-chi/chi](https://github.com/go-chi/chi) v5
 - **Logger**: [uber-go/zap](https://github.com/uber-go/zap) - Alta performance
 - **UUID**: [google/uuid](https://github.com/google/uuid) - Geração de Request IDs
@@ -21,6 +23,8 @@ receitas-app/
 ├── cmd/api/                    # Executáveis
 │   └── main.go                 # Entrypoint da aplicação
 ├── internal/                   # Código interno da aplicação
+│   ├── models/                 # Modelos de dados
+│   │   └── recipe.go           # Modelo Recipe (GORM)
 │   ├── server/                 # Configuração do servidor
 │   │   └── server.go
 │   └── http/
@@ -29,8 +33,12 @@ receitas-app/
 │       ├── routes/             # Registro de rotas
 │       │   └── routes.go
 │       └── handlers/           # Handlers HTTP
-│           └── test.go
+│           ├── health.go       # Health check
+│           ├── test.go         # Handler de teste
+│           └── recipe.go       # CRUD de receitas
 ├── pkg/                        # Utilitários reutilizáveis
+│   ├── database/               # Conexão com database
+│   │   └── connection.go       # PostgreSQL + GORM
 │   ├── log/                    # Sistema de logging
 │   │   ├── logger.go           # API de logging (estilo Android)
 │   │   └── config.go           # Configuração do logger
@@ -38,11 +46,17 @@ receitas-app/
 │       └── json.go             # Helpers para respostas JSON
 ├── test/                       # Testes unitários
 │   ├── test_handler_test.go
+│   ├── health_handler_test.go
+│   ├── recipe_handler_test.go
 │   └── logger_test.go
 ├── .cursor/commands/           # Comandos Cursor
 │   ├── create-route.md
 │   └── create-test.md
-├── go.mod                      # Dependências
+├── Dockerfile                  # Multi-stage build
+├── .dockerignore
+├── railway.toml               # Configuração Railway
+├── .env.example               # Variáveis de ambiente
+├── go.mod                     # Dependências
 └── README.md
 ```
 
@@ -109,12 +123,12 @@ log.ErrorCtx(ctx, "operation failed", "error", err)
 
 Configure o nível através da variável `LOG_LEVEL`:
 
-| Nível | Variável | O que mostra |
-|-------|----------|--------------|
-| **debug** | `LOG_LEVEL=debug` | Tudo (debug, info, warn, error) |
-| **info** | `LOG_LEVEL=info` | info, warn, error (padrão produção) |
-| **warn** | `LOG_LEVEL=warn` | warn, error |
-| **error** | `LOG_LEVEL=error` | Somente erros |
+| Nível     | Variável          | O que mostra                        |
+| --------- | ----------------- | ----------------------------------- |
+| **debug** | `LOG_LEVEL=debug` | Tudo (debug, info, warn, error)     |
+| **info**  | `LOG_LEVEL=info`  | info, warn, error (padrão produção) |
+| **warn**  | `LOG_LEVEL=warn`  | warn, error                         |
+| **error** | `LOG_LEVEL=error` | Somente erros                       |
 
 ### Formato de Saída
 
@@ -248,6 +262,164 @@ Endpoint de teste que retorna uma mensagem "hello world".
 **Status**: 200 OK  
 **Content-Type**: application/json
 
+### GET /recipes
+
+Lista todas as receitas cadastradas.
+
+**Response**:
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Bolo de Chocolate",
+    "description": "Delicioso bolo de chocolate",
+    "prep_time": 45,
+    "servings": 8,
+    "difficulty": "média",
+    "created_at": "2025-12-24T10:30:45Z",
+    "updated_at": "2025-12-24T10:30:45Z"
+  }
+]
+```
+
+### POST /recipes
+
+Cria uma nova receita.
+
+**Request Body**:
+
+```json
+{
+  "title": "Bolo de Chocolate",
+  "description": "Delicioso bolo de chocolate",
+  "prep_time": 45,
+  "servings": 8,
+  "difficulty": "média"
+}
+```
+
+**Response**: 201 Created
+
+### GET /recipes/{id}
+
+Busca uma receita específica por ID.
+
+**Response**: 200 OK
+
+### PUT /recipes/{id}
+
+Atualiza uma receita existente.
+
+**Response**: 200 OK
+
+### DELETE /recipes/{id}
+
+Remove uma receita (soft delete).
+
+**Response**: 200 OK
+
+## 🗄️ Database PostgreSQL
+
+O projeto utiliza **PostgreSQL** com **GORM** para persistência de dados.
+
+### Modelo de Dados
+
+#### Receita (Recipe)
+
+| Campo         | Tipo      | Descrição                          |
+| ------------- | --------- | ---------------------------------- |
+| `id`          | uint      | ID único da receita                |
+| `title`       | string    | Título (max 200 caracteres)        |
+| `description` | text      | Descrição detalhada                |
+| `prep_time`   | int       | Tempo de preparo em minutos        |
+| `servings`    | int       | Número de porções                  |
+| `difficulty`  | string    | Dificuldade: fácil, média, difícil |
+| `created_at`  | timestamp | Data de criação                    |
+| `updated_at`  | timestamp | Data de atualização                |
+| `deleted_at`  | timestamp | Data de exclusão (soft delete)     |
+
+### Configuração Local
+
+Para desenvolvimento local com PostgreSQL:
+
+```bash
+# 1. Instalar PostgreSQL
+# macOS: brew install postgresql
+# Ubuntu: sudo apt install postgresql
+
+# 2. Criar database
+createdb receitas_db
+
+# 3. Configurar variável de ambiente
+export DATABASE_URL="postgres://usuario:senha@localhost:5432/receitas_db?sslmode=disable"
+
+# 4. Executar aplicação (migrations automáticas)
+go run ./cmd/api
+```
+
+### Railway - PostgreSQL
+
+No Railway, adicionar PostgreSQL é simples:
+
+1. **Dashboard Railway** → **New** → **Database** → **Add PostgreSQL**
+2. Railway cria automaticamente a variável `DATABASE_URL`
+3. Aplicação conecta automaticamente ao database
+4. Migrations executam no startup
+
+### GORM Features
+
+- ✅ **AutoMigrate**: Cria/atualiza tabelas automaticamente
+- ✅ **Soft Delete**: Registros deletados ficam recuperáveis
+- ✅ **Connection Pool**: Performance otimizada
+- ✅ **Timestamps**: `created_at` e `updated_at` automáticos
+- ✅ **Query Logging**: Queries logadas em desenvolvimento
+
+### Exemplos de Uso
+
+**Criar Receita:**
+
+```bash
+curl -X POST http://localhost:8080/recipes \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Bolo de Chocolate",
+    "description": "Delicioso bolo de chocolate com cobertura",
+    "prep_time": 45,
+    "servings": 8,
+    "difficulty": "média"
+  }'
+```
+
+**Listar Receitas:**
+
+```bash
+curl http://localhost:8080/recipes
+```
+
+**Buscar Receita:**
+
+```bash
+curl http://localhost:8080/recipes/1
+```
+
+**Atualizar Receita:**
+
+```bash
+curl -X PUT http://localhost:8080/recipes/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Bolo de Chocolate Especial",
+    "prep_time": 50
+  }'
+```
+
+**Deletar Receita:**
+
+```bash
+curl -X DELETE http://localhost:8080/recipes/1
+```
+
 ## 📝 Desenvolvimento
 
 ### Adicionar nova rota
@@ -294,19 +466,30 @@ O projeto está pronto para deploy em diversas plataformas cloud.
 ### 🚂 Railway
 
 1. **Conectar Repositório**
+
    - Acesse [Railway](https://railway.app)
    - Conecte seu repositório GitHub
    - Railway detectará automaticamente o Dockerfile
 
-2. **Configurar Variáveis de Ambiente**
+2. **Adicionar PostgreSQL**
+
+   - No dashboard → **New** → **Database** → **Add PostgreSQL**
+   - Railway cria automaticamente `DATABASE_URL`
+   - Database gratuito até 500MB
+
+3. **Configurar Variáveis de Ambiente**
+
    ```
    ENV=production
    LOG_LEVEL=info
    ```
 
-3. **Deploy Automático**
+   (DATABASE_URL é criado automaticamente pelo Railway)
+
+4. **Deploy Automático**
    - Cada push para a branch main fará deploy automático
    - Railway define a variável `PORT` automaticamente
+   - Migrations executam no startup
    - Health check configurado em `/health`
 
 ### 🟣 Heroku
@@ -364,11 +547,12 @@ gcloud run deploy receitas-app \
 
 ### 📋 Variáveis de Ambiente Necessárias
 
-| Variável | Obrigatória | Padrão | Descrição |
-|----------|-------------|--------|-----------|
-| `ENV` | Não | `development` | Ambiente: `development`, `staging`, `production` |
-| `LOG_LEVEL` | Não | `info` | Nível de log: `debug`, `info`, `warn`, `error` |
-| `PORT` | Não | `8080` | Porta do servidor (auto-definida em clouds) |
+| Variável       | Obrigatória | Padrão        | Descrição                                        |
+| -------------- | ----------- | ------------- | ------------------------------------------------ |
+| `ENV`          | Não         | `development` | Ambiente: `development`, `staging`, `production` |
+| `LOG_LEVEL`    | Não         | `info`        | Nível de log: `debug`, `info`, `warn`, `error`   |
+| `PORT`         | Não         | `8080`        | Porta do servidor (auto-definida em clouds)      |
+| `DATABASE_URL` | Sim         | -             | PostgreSQL connection string (auto no Railway)   |
 
 ### ✅ Checklist Pré-Deploy
 
@@ -382,11 +566,13 @@ gcloud run deploy receitas-app \
 ### 🔍 Monitoramento Pós-Deploy
 
 **Health Check Endpoint:**
+
 ```bash
 curl https://sua-app.railway.app/health
 ```
 
 **Resposta esperada:**
+
 ```json
 {
   "status": "healthy",
@@ -395,6 +581,7 @@ curl https://sua-app.railway.app/health
 ```
 
 **Logs em Produção:**
+
 ```bash
 # Railway
 railway logs
@@ -414,10 +601,16 @@ gcloud run services logs read receitas-app --limit=50
 - [x] Health check endpoint
 - [x] Docker & Dockerfile multi-stage
 - [x] Production-ready (Railway, Heroku, Cloud Run)
-- [ ] Endpoints RESTful completos
-- [ ] Camada de banco de dados
-- [ ] Autenticação e autorização
-- [ ] Migrations
+- [x] PostgreSQL + GORM
+- [x] CRUD completo de Receitas
+- [x] Migrations automáticas (GORM AutoMigrate)
+- [x] Soft Delete
+- [ ] Relacionamentos (Ingredientes, Categorias, Usuários)
+- [ ] Validação de dados (go-playground/validator)
+- [ ] Paginação e filtros
+- [ ] Busca full-text
+- [ ] Autenticação e autorização (JWT)
+- [ ] Upload de imagens
 - [ ] Observabilidade (métricas, tracing)
 - [ ] CI/CD
 - [ ] Documentação da API (Swagger/OpenAPI)

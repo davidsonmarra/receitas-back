@@ -9,7 +9,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/davidsonmarra/receitas-app/internal/models"
 	"github.com/davidsonmarra/receitas-app/internal/server"
+	"github.com/davidsonmarra/receitas-app/pkg/database"
 	"github.com/davidsonmarra/receitas-app/pkg/log"
 )
 
@@ -33,6 +35,23 @@ func main() {
 		os.Exit(1)
 	}
 	defer log.Sync() // Flush buffers antes de sair
+
+	// Conectar ao database
+	log.Info("connecting to database")
+	if err := database.Connect(); err != nil {
+		log.Error("failed to connect to database", "error", err)
+		os.Exit(1)
+	}
+	defer database.Close()
+
+	// Auto migrate (criar/atualizar tabelas)
+	log.Info("running database migrations")
+	if err := database.DB.AutoMigrate(&models.Recipe{}); err != nil {
+		log.Error("failed to migrate database", "error", err)
+		os.Exit(1)
+	}
+
+	log.Info("database connected successfully")
 
 	// Configuração da porta (lê de PORT env var ou usa 8080)
 	port := getPort()
