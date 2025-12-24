@@ -1,0 +1,211 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2025-12-24T16:40:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_receitas_app",
+      "_type": "workspace",
+      "name": "Receitas API",
+      "description": "API para gerenciamento de receitas",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "https://receitas-back-production.up.railway.app"
+      },
+      "dataPropertyOrder": null,
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1,
+      "parentId": "wrk_receitas_app"
+    },
+    {
+      "_id": "fld_health",
+      "_type": "request_group",
+      "name": "Health & Test",
+      "description": "Endpoints de saúde e teste",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1,
+      "parentId": "wrk_receitas_app"
+    },
+    {
+      "_id": "req_health",
+      "_type": "request",
+      "name": "Health Check",
+      "url": "{{ _.base_url }}/health",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Verifica a saúde da aplicação e conexão com o database",
+      "parentId": "fld_health"
+    },
+    {
+      "_id": "req_test",
+      "_type": "request",
+      "name": "Test Endpoint",
+      "url": "{{ _.base_url }}/test",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Endpoint de teste simples",
+      "parentId": "fld_health"
+    },
+    {
+      "_id": "fld_recipes",
+      "_type": "request_group",
+      "name": "Recipes",
+      "description": "CRUD de receitas",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2,
+      "parentId": "wrk_receitas_app"
+    },
+    {
+      "_id": "req_create_recipe",
+      "_type": "request",
+      "name": "Create Recipe",
+      "url": "{{ _.base_url }}/recipes",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"title\": \"Bolo de Chocolate\",\n\t\"description\": \"Um delicioso bolo de chocolate macio e fofinho\",\n\t\"prep_time\": 60,\n\t\"servings\": 8,\n\t\"difficulty\": \"média\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Cria uma nova receita",
+      "parentId": "fld_recipes"
+    },
+    {
+      "_id": "req_list_recipes",
+      "_type": "request",
+      "name": "List Recipes",
+      "url": "{{ _.base_url }}/recipes",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Lista todas as receitas",
+      "parentId": "fld_recipes"
+    },
+    {
+      "_id": "req_get_recipe",
+      "_type": "request",
+      "name": "Get Recipe by ID",
+      "url": "{{ _.base_url }}/recipes/1",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Busca uma receita específica pelo ID",
+      "parentId": "fld_recipes"
+    },
+    {
+      "_id": "req_update_recipe",
+      "_type": "request",
+      "name": "Update Recipe",
+      "url": "{{ _.base_url }}/recipes/1",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"title\": \"Bolo de Chocolate Premium\",\n\t\"description\": \"Um delicioso bolo de chocolate belga macio e fofinho\",\n\t\"prep_time\": 75,\n\t\"servings\": 10,\n\t\"difficulty\": \"difícil\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Atualiza uma receita existente",
+      "parentId": "fld_recipes"
+    },
+    {
+      "_id": "req_delete_recipe",
+      "_type": "request",
+      "name": "Delete Recipe",
+      "url": "{{ _.base_url }}/recipes/1",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Deleta uma receita (soft delete)",
+      "parentId": "fld_recipes"
+    }
+  ]
+}
