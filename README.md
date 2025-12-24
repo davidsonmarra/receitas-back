@@ -64,7 +64,7 @@ receitas-app/
 
 ### Pré-requisitos
 
-- Go 1.23 ou superior instalado
+- Go 1.24 ou superior instalado
 
 ### Executar o servidor
 
