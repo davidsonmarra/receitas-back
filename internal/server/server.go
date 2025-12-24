@@ -1,17 +1,19 @@
 package server
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/davidsonmarra/receitas-app/internal/http/routes"
+	"github.com/davidsonmarra/receitas-app/pkg/log"
 )
 
 // Server representa o servidor HTTP da aplicação
 type Server struct {
-	Port int
+	Port       int
+	httpServer *http.Server
 }
 
 // New cria uma nova instância do servidor
@@ -27,7 +29,7 @@ func (s *Server) Start() error {
 
 	addr := fmt.Sprintf(":%d", s.Port)
 
-	srv := &http.Server{
+	s.httpServer = &http.Server{
 		Addr:         addr,
 		Handler:      router,
 		ReadTimeout:  15 * time.Second,
@@ -35,8 +37,19 @@ func (s *Server) Start() error {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	log.Printf("Servidor iniciado na porta %d", s.Port)
-	log.Printf("Acesse: http://localhost%s/test", addr)
+	log.Info("server starting",
+		"port", s.Port,
+		"address", addr,
+	)
 
-	return srv.ListenAndServe()
+	return s.httpServer.ListenAndServe()
+}
+
+// Shutdown realiza o shutdown graceful do servidor
+func (s *Server) Shutdown(ctx context.Context) error {
+	if s.httpServer != nil {
+		log.Info("shutting down HTTP server")
+		return s.httpServer.Shutdown(ctx)
+	}
+	return nil
 }

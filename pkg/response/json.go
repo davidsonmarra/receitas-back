@@ -2,8 +2,9 @@ package response
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
+
+	"github.com/davidsonmarra/receitas-app/pkg/log"
 )
 
 // JSON escreve uma resposta JSON com o status code especificado
@@ -12,7 +13,7 @@ func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.WriteHeader(statusCode)
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Printf("Erro ao codificar resposta JSON: %v", err)
+		log.Error("failed to encode JSON response", "error", err)
 	}
 }
 

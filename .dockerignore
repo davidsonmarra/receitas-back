@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.cursor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Documentação
+*.md
+!README.md
+
+# Ambiente
+.env
+.env.local
+.env.example
+
+# Build
+bin/
+api
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Testes
+*.test
+*.out
+coverage.out
+
+# Temporários
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Go
+vendor/
+

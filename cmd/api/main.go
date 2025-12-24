@@ -1,23 +1,87 @@
 package main
 
 import (
-	"log"
+	"context"
+	"fmt"
 	"os"
+	"os/signal"
+	"strconv"
+	"syscall"
+	"time"
 
 	"github.com/davidsonmarra/receitas-app/internal/server"
+	"github.com/davidsonmarra/receitas-app/pkg/log"
 )
 
 func main() {
-	// Configuração da porta (padrão: 8080)
-	port := 8080
+	// Inicializar logger
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "" {
+		logLevel = "info" // Padrão
+	}
 
-	// Cria e inicia o servidor
-	srv := server.New(port)
+	env := os.Getenv("ENV")
+	isDevelopment := env != "production"
 
-	log.Println("Iniciando servidor API...")
+	logConfig := log.Config{
+		Level:       logLevel,
+		Development: isDevelopment,
+	}
 
-	if err := srv.Start(); err != nil {
-		log.Printf("Erro ao iniciar servidor: %v", err)
+	if err := log.Init(logConfig); err != nil {
+		fmt.Printf("Failed to initialize logger: %v\n", err)
 		os.Exit(1)
 	}
+	defer log.Sync() // Flush buffers antes de sair
+
+	// Configuração da porta (lê de PORT env var ou usa 8080)
+	port := getPort()
+
+	log.Info("starting API server",
+		"env", env,
+		"log_level", logLevel,
+		"port", port,
+	)
+
+	// Cria o servidor
+	srv := server.New(port)
+
+	// Canal para capturar sinais de shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// Iniciar servidor em goroutine
+	go func() {
+		if err := srv.Start(); err != nil {
+			log.Error("server failed to start", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Aguardar sinal de shutdown
+	<-quit
+	log.Info("shutting down server gracefully...")
+
+	// Criar contexto com timeout de 30 segundos
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Shutdown graceful
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Error("server forced to shutdown", "error", err)
+		os.Exit(1)
+	}
+
+	log.Info("server stopped gracefully")
+}
+
+// getPort retorna a porta configurada via PORT env var ou 8080 como padrão
+func getPort() int {
+	portStr := os.Getenv("PORT")
+	if portStr != "" {
+		if port, err := strconv.Atoi(portStr); err == nil {
+			return port
+		}
+	}
+	return 8080 // Padrão para desenvolvimento
 }
