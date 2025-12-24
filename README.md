@@ -8,7 +8,7 @@ Este projeto estabelece a fundação para um serviço backend escrito em Go. A F
 
 ## 🔧 Tecnologias
 
-- **Go**: ≥ 1.22
+- **Go**: ≥ 1.23
 - **Database**: [PostgreSQL](https://www.postgresql.org/) - Database relacional
 - **ORM**: [GORM](https://gorm.io/) v1.31+ - ORM completo para Go
 - **Router**: [go-chi/chi](https://github.com/go-chi/chi) v5
@@ -64,7 +64,7 @@ receitas-app/
 
 ### Pré-requisitos
 
-- Go 1.22 ou superior instalado
+- Go 1.23 ou superior instalado
 
 ### Executar o servidor
 
