@@ -32,6 +32,18 @@ func Setup() *chi.Mux {
 	r.Get("/health", handlers.HealthHandler) // Health check endpoint
 	r.Get("/test", handlers.TestHandler)
 
+	// Rotas de usuários
+	r.Route("/users", func(r chi.Router) {
+		// POST /users/register - rate limit de escrita
+		r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/register", handlers.Register)
+		
+		// POST /users/login - rate limit de escrita
+		r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/login", handlers.Login)
+		
+		// POST /users/logout - requer autenticação
+		r.With(customMiddleware.RequireAuth).Post("/logout", handlers.Logout)
+	})
+
 	// Rotas de receitas com rate limiting específico
 	r.Route("/recipes", func(r chi.Router) {
 		// GET /recipes - rate limit de leitura

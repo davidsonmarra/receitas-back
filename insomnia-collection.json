@@ -1,7 +1,7 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2025-12-24T16:40:00.000Z",
+  "__export_date": "2025-12-26T12:00:00.000Z",
   "__export_source": "insomnia.desktop.app:v2023.5.8",
   "resources": [
     {
@@ -77,13 +77,107 @@
       "parentId": "fld_health"
     },
     {
+      "_id": "fld_auth",
+      "_type": "request_group",
+      "name": "Authentication",
+      "description": "Endpoints de autenticação JWT",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2,
+      "parentId": "wrk_receitas_app"
+    },
+    {
+      "_id": "req_register",
+      "_type": "request",
+      "name": "Register User",
+      "url": "{{ _.base_url }}/users/register",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"name\": \"João Silva\",\n\t\"email\": \"joao@example.com\",\n\t\"password\": \"senha123\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Cadastra um novo usuário e retorna token JWT. Validações: nome (min 3 chars), email válido e único, senha (min 6 chars).",
+      "parentId": "fld_auth"
+    },
+    {
+      "_id": "req_login",
+      "_type": "request",
+      "name": "Login",
+      "url": "{{ _.base_url }}/users/login",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"email\": \"joao@example.com\",\n\t\"password\": \"senha123\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Autentica um usuário e retorna token JWT com validade de 24 horas.",
+      "parentId": "fld_auth"
+    },
+    {
+      "_id": "req_logout",
+      "_type": "request",
+      "name": "Logout",
+      "url": "{{ _.base_url }}/users/logout",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_TOKEN_HERE"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Invalida o token atual adicionando-o à blacklist. Requer token JWT no header Authorization.",
+      "parentId": "fld_auth"
+    },
+    {
       "_id": "fld_recipes",
       "_type": "request_group",
       "name": "Recipes",
       "description": "CRUD de receitas",
       "environment": {},
       "environmentPropertyOrder": null,
-      "metaSortKey": 2,
+      "metaSortKey": 3,
       "parentId": "wrk_receitas_app"
     },
     {
@@ -274,7 +368,7 @@
       "description": "Testes de rate limiting - Execute múltiplas vezes para testar limites",
       "environment": {},
       "environmentPropertyOrder": null,
-      "metaSortKey": 3,
+      "metaSortKey": 4,
       "parentId": "wrk_receitas_app"
     },
     {

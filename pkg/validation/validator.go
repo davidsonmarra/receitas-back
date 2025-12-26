@@ -71,6 +71,9 @@ func translateField(field string) string {
 		"PrepTime":    "tempo de preparo",
 		"Servings":    "número de porções",
 		"Difficulty":  "dificuldade",
+		"Name":        "nome",
+		"Email":       "e-mail",
+		"Password":    "senha",
 	}
 
 	if translated, ok := translations[field]; ok {

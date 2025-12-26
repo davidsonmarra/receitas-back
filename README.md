@@ -99,6 +99,12 @@ export LOG_LEVEL=debug
 # Opcional: Definir ambiente (development ou production)
 export ENV=development
 
+# Obrigatório para autenticação: Secret do JWT
+export JWT_SECRET="sua-chave-secreta-muito-longa-e-aleatoria"
+
+# Obrigatório: String de conexão PostgreSQL
+export DATABASE_URL="postgres://usuario:senha@localhost:5432/receitas_db?sslmode=disable"
+
 # Executar servidor
 go run ./cmd/api
 ```
@@ -665,6 +671,146 @@ A validação é realizada em três camadas:
 
 Pacote: [`pkg/validation`](pkg/validation/validator.go)
 
+## 🔐 Autenticação JWT
+
+A API utiliza **JSON Web Tokens (JWT)** para autenticação de usuários. Tokens expiram em 24 horas e podem ser invalidados através do logout.
+
+### Configuração
+
+Defina a variável de ambiente `JWT_SECRET` com uma string longa e aleatória:
+
+```bash
+# Desenvolvimento
+export JWT_SECRET="desenvolvimento-secret-nao-usar-em-producao-12345"
+
+# Produção (Railway)
+railway variables set JWT_SECRET="$(openssl rand -base64 32)"
+```
+
+**⚠️ IMPORTANTE**: Use um secret forte e único em produção. Nunca compartilhe ou commite o JWT_SECRET!
+
+### Endpoints de Autenticação
+
+#### POST /users/register
+
+Cadastra um novo usuário e retorna token automaticamente.
+
+**Request**:
+```json
+{
+  "name": "João Silva",
+  "email": "joao@example.com",
+  "password": "senha123"
+}
+```
+
+**Response** (201 Created):
+```json
+{
+  "user": {
+    "id": 1,
+    "name": "João Silva",
+    "email": "joao@example.com",
+    "created_at": "2025-12-26T10:00:00Z",
+    "updated_at": "2025-12-26T10:00:00Z"
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Validações**:
+- Nome: mínimo 3 caracteres, máximo 100
+- E-mail: formato válido, único no sistema
+- Senha: mínimo 6 caracteres
+
+#### POST /users/login
+
+Autentica um usuário e retorna token.
+
+**Request**:
+```json
+{
+  "email": "joao@example.com",
+  "password": "senha123"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "user": {
+    "id": 1,
+    "name": "João Silva",
+    "email": "joao@example.com",
+    "created_at": "2025-12-26T10:00:00Z",
+    "updated_at": "2025-12-26T10:00:00Z"
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Erro** (401 Unauthorized):
+```json
+{
+  "error": {
+    "title": "Ops, algo deu errado!",
+    "message": "E-mail ou senha inválidos"
+  }
+}
+```
+
+#### POST /users/logout
+
+Invalida o token atual (requer autenticação).
+
+**Request Headers**:
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Response** (200 OK):
+```json
+{
+  "message": "Logout realizado com sucesso"
+}
+```
+
+### Usando Tokens
+
+Para acessar endpoints protegidos, inclua o token no header Authorization:
+
+```bash
+curl -H "Authorization: Bearer SEU_TOKEN_AQUI" \
+  http://localhost:8080/users/logout
+```
+
+### Segurança
+
+✅ **Senhas**:
+- Hash com bcrypt (cost 12)
+- Nunca retornadas nas respostas
+- Validação de força mínima
+
+✅ **Tokens JWT**:
+- Expiração de 24 horas
+- Assinados com HS256 (HMAC-SHA256)
+- Blacklist para logout efetivo
+- Claims incluem: user_id, email, exp, iat, nbf
+
+✅ **E-mails**:
+- Índice único no banco
+- Validação de formato
+- Case-sensitive
+
+### Receitas e Usuários
+
+A API suporta dois tipos de receitas:
+
+1. **Receitas Gerais**: Sem `user_id` (criadas pelo sistema/admin)
+2. **Receitas Personalizadas**: Com `user_id` (criadas por usuários)
+
+Futuramente, receitas personalizadas só poderão ser editadas/deletadas pelo próprio criador.
+
 ## 🔌 Endpoints
 
 ### GET /health
@@ -700,23 +846,34 @@ Endpoint de teste que retorna uma mensagem "hello world".
 
 ### GET /recipes
 
-Lista todas as receitas cadastradas.
+Lista todas as receitas cadastradas (gerais e personalizadas).
 
 **Response**:
 
 ```json
-[
-  {
-    "id": 1,
-    "title": "Bolo de Chocolate",
-    "description": "Delicioso bolo de chocolate",
-    "prep_time": 45,
-    "servings": 8,
-    "difficulty": "média",
-    "created_at": "2025-12-24T10:30:45Z",
-    "updated_at": "2025-12-24T10:30:45Z"
+{
+  "data": [
+    {
+      "id": 1,
+      "title": "Bolo de Chocolate",
+      "description": "Delicioso bolo de chocolate",
+      "prep_time": 45,
+      "servings": 8,
+      "difficulty": "média",
+      "user_id": null,
+      "created_at": "2025-12-24T10:30:45Z",
+      "updated_at": "2025-12-24T10:30:45Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "total_pages": 1,
+    "has_next": false,
+    "has_prev": false
   }
-]
+}
 ```
 
 ### POST /recipes
@@ -989,6 +1146,7 @@ gcloud run deploy receitas-app \
 | `LOG_LEVEL`    | Não         | `info`        | Nível de log: `debug`, `info`, `warn`, `error`   |
 | `PORT`         | Não         | `8080`        | Porta do servidor (auto-definida em clouds)      |
 | `DATABASE_URL` | Sim         | -             | PostgreSQL connection string (auto no Railway)   |
+| `JWT_SECRET`   | Sim         | -             | Secret para assinar tokens JWT (min 32 chars)    |
 
 ### ✅ Checklist Pré-Deploy
 
@@ -1238,9 +1396,12 @@ Desabilita APIs do browser que não são necessárias para uma API REST (geoloca
 - [x] Paginação e filtros
 - [x] Rate Limiting (proteção contra abuso)
 - [x] Security Headers (OWASP compliance)
-- [ ] Relacionamentos (Ingredientes, Categorias, Usuários)
+- [x] Autenticação JWT (login, logout, registro)
+- [x] Sistema de usuários
+- [x] Receitas gerais e personalizadas
+- [ ] Relacionamentos (Ingredientes, Categorias)
 - [ ] Busca full-text
-- [ ] Autenticação e autorização (JWT)
+- [ ] Autorização de receitas por usuário
 - [ ] Upload de imagens
 - [ ] Observabilidade (métricas, tracing)
 - [ ] CI/CD
