@@ -266,6 +266,108 @@
       "settingFollowRedirects": "global",
       "description": "Deleta uma receita (soft delete)",
       "parentId": "fld_recipes"
+    },
+    {
+      "_id": "fld_rate_limit",
+      "_type": "request_group",
+      "name": "Rate Limit Tests",
+      "description": "Testes de rate limiting - Execute múltiplas vezes para testar limites",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3,
+      "parentId": "wrk_receitas_app"
+    },
+    {
+      "_id": "req_rate_limit_global",
+      "_type": "request",
+      "name": "Test Global Rate Limit (100/min)",
+      "url": "{{ _.base_url }}/test",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Execute este request 101 vezes rapidamente para testar o limite global de 100 req/min.\n\nHeaders esperados:\n- X-RateLimit-Limit: 100\n- X-RateLimit-Remaining: (decresce a cada request)\n- X-RateLimit-Reset: (timestamp de reset)\n\nApós 100 requests, deve retornar 429 com:\n- Retry-After: (segundos até poder tentar novamente)",
+      "parentId": "fld_rate_limit"
+    },
+    {
+      "_id": "req_rate_limit_read",
+      "_type": "request",
+      "name": "Test Read Rate Limit (60/min)",
+      "url": "{{ _.base_url }}/recipes",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Execute este request 61 vezes rapidamente para testar o limite de leitura de 60 req/min.\n\nHeaders esperados:\n- X-RateLimit-Limit: 60\n- X-RateLimit-Remaining: (decresce a cada request)\n- X-RateLimit-Reset: (timestamp de reset)\n\nApós 60 requests, deve retornar 429 com:\n{\n  \"error\": {\n    \"title\": \"Ops, muitas requisições!\",\n    \"message\": \"Você excedeu o limite de requisições. Tente novamente em alguns segundos.\"\n  }\n}",
+      "parentId": "fld_rate_limit"
+    },
+    {
+      "_id": "req_rate_limit_write",
+      "_type": "request",
+      "name": "Test Write Rate Limit (20/min)",
+      "url": "{{ _.base_url }}/recipes",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"title\": \"Teste Rate Limit\",\n\t\"description\": \"Receita para testar rate limiting\",\n\t\"prep_time\": 30,\n\t\"servings\": 4,\n\t\"difficulty\": \"fácil\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Execute este request 21 vezes rapidamente para testar o limite de escrita de 20 req/min.\n\nHeaders esperados:\n- X-RateLimit-Limit: 20\n- X-RateLimit-Remaining: (decresce a cada request)\n- X-RateLimit-Reset: (timestamp de reset)\n\nApós 20 requests, deve retornar 429.\n\nNota: Endpoints de escrita (POST, PUT, DELETE) têm limite mais restritivo para proteger contra abuso.",
+      "parentId": "fld_rate_limit"
+    },
+    {
+      "_id": "req_rate_limit_429_example",
+      "_type": "request",
+      "name": "Example 429 Response",
+      "url": "{{ _.base_url }}/recipes",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Este request mostra um exemplo de resposta 429 (Too Many Requests).\n\nPara ver a resposta real:\n1. Execute GET /recipes 61 vezes rapidamente\n2. A 61ª requisição retornará 429\n\nResposta esperada:\n\nStatus: 429 Too Many Requests\n\nHeaders:\nX-RateLimit-Limit: 60\nX-RateLimit-Remaining: 0\nX-RateLimit-Reset: 1735215720\nRetry-After: 42\nContent-Type: application/json\n\nBody:\n{\n  \"error\": {\n    \"title\": \"Ops, muitas requisições!\",\n    \"message\": \"Você excedeu o limite de requisições. Tente novamente em alguns segundos.\"\n  }\n}",
+      "parentId": "fld_rate_limit"
     }
   ]
 }

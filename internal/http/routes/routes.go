@@ -12,23 +12,41 @@ import (
 func Setup() *chi.Mux {
 	r := chi.NewRouter()
 
-	// Middlewares
+	// Carregar configuração de rate limiting
+	rateLimitConfig := customMiddleware.LoadRateLimitConfig()
+
+	// Middlewares globais
 	r.Use(customMiddleware.SetupCORS())      // CORS - deve ser o primeiro
 	r.Use(customMiddleware.RequestID)        // Adiciona Request ID a cada requisição
+	
+	// Rate limit global (se habilitado)
+	if rateLimitConfig.Enabled {
+		r.Use(customMiddleware.RateLimitGlobal(rateLimitConfig.Global))
+	}
+	
 	r.Use(customMiddleware.RequestSizeLimit) // Limita tamanho do body da requisição
 	r.Use(middleware.Recoverer)              // Recupera de panics
 
-	// Rotas
+	// Rotas sem rate limit específico (apenas global)
 	r.Get("/health", handlers.HealthHandler) // Health check endpoint
 	r.Get("/test", handlers.TestHandler)
 
-	// Rotas de receitas
+	// Rotas de receitas com rate limiting específico
 	r.Route("/recipes", func(r chi.Router) {
-		r.Get("/", handlers.ListRecipes)
-		r.Post("/", handlers.CreateRecipe)
-		r.Get("/{id}", handlers.GetRecipe)
-		r.Put("/{id}", handlers.UpdateRecipe)
-		r.Delete("/{id}", handlers.DeleteRecipe)
+		// GET /recipes - rate limit de leitura
+		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/", handlers.ListRecipes)
+		
+		// POST /recipes - rate limit de escrita
+		r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/", handlers.CreateRecipe)
+		
+		// GET /recipes/{id} - rate limit de leitura
+		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/{id}", handlers.GetRecipe)
+		
+		// PUT /recipes/{id} - rate limit de escrita
+		r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Put("/{id}", handlers.UpdateRecipe)
+		
+		// DELETE /recipes/{id} - rate limit de escrita
+		r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/{id}", handlers.DeleteRecipe)
 	})
 
 	return r

@@ -1029,6 +1029,135 @@ heroku logs --tail
 gcloud run services logs read receitas-app --limit=50
 ```
 
+## 🛡️ Rate Limiting
+
+A API implementa **rate limiting** para proteger contra abuso e garantir qualidade de serviço. O sistema limita o número de requisições por IP em janelas de tempo de 1 minuto.
+
+### Estratégia de Limites
+
+A API utiliza **dois níveis de rate limiting**:
+
+1. **Global**: Limite máximo para qualquer endpoint
+2. **Por Endpoint**: Limites específicos baseados no tipo de operação
+
+| Endpoint | Método | Limite | Tipo |
+|----------|--------|--------|------|
+| `/health` | GET | 100/min | Global |
+| `/test` | GET | 100/min | Global |
+| `/recipes` | GET | 60/min | Leitura |
+| `/recipes` | POST | 20/min | Escrita |
+| `/recipes/{id}` | GET | 60/min | Leitura |
+| `/recipes/{id}` | PUT | 20/min | Escrita |
+| `/recipes/{id}` | DELETE | 20/min | Escrita |
+
+### Configuração
+
+Configure os limites através de variáveis de ambiente:
+
+```bash
+# Habilitar/desabilitar rate limiting (padrão: true)
+RATE_LIMIT_ENABLED=true
+
+# Limite global para todos os endpoints (padrão: 100 req/min)
+RATE_LIMIT_GLOBAL=100
+
+# Limite para endpoints de leitura (padrão: 60 req/min)
+RATE_LIMIT_READ=60
+
+# Limite para endpoints de escrita (padrão: 20 req/min)
+RATE_LIMIT_WRITE=20
+```
+
+### Resposta 429 (Too Many Requests)
+
+Quando o limite é excedido, a API retorna:
+
+**Status**: `429 Too Many Requests`
+
+**Headers**:
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 1735215720
+Retry-After: 42
+Content-Type: application/json
+```
+
+**Body**:
+```json
+{
+  "error": {
+    "title": "Ops, muitas requisições!",
+    "message": "Você excedeu o limite de requisições. Tente novamente em alguns segundos."
+  }
+}
+```
+
+### Identificação do Cliente
+
+O rate limiting identifica clientes pelo **endereço IP**, considerando proxies e load balancers:
+
+1. **X-Forwarded-For**: Primeiro IP da lista (cliente original)
+2. **X-Real-IP**: IP real do cliente (nginx, etc)
+3. **RemoteAddr**: Fallback para IP direto
+
+Isso garante que o rate limiting funcione corretamente em ambientes de produção com proxies reversos (Railway, Heroku, etc).
+
+### Desabilitar em Desenvolvimento
+
+Para desabilitar o rate limiting durante o desenvolvimento:
+
+```bash
+export RATE_LIMIT_ENABLED=false
+go run ./cmd/api
+```
+
+### Testar Rate Limiting
+
+#### Teste Manual com curl
+
+```bash
+# Fazer múltiplas requisições rapidamente
+for i in {1..65}; do
+  curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/recipes
+done
+
+# Primeiras 60 devem retornar 200
+# Demais devem retornar 429
+```
+
+#### Verificar Headers
+
+```bash
+curl -I http://localhost:8080/recipes
+
+# Headers de rate limit:
+# X-RateLimit-Limit: 60
+# X-RateLimit-Remaining: 59
+# X-RateLimit-Reset: 1735215720
+```
+
+### Escalabilidade
+
+**Implementação Atual**: Memória local (in-memory)
+- ✅ Simples e performático
+- ✅ Sem dependências externas
+- ✅ Ideal para instância única (padrão Railway)
+- ⚠️ Não compartilha estado entre múltiplas instâncias
+
+**Migração Futura para Redis** (se necessário):
+
+Se você escalar para múltiplas instâncias no Railway, a arquitetura está preparada para trocar o storage de memória local por Redis, permitindo rate limiting compartilhado entre todas as instâncias.
+
+### Vantagens
+
+✅ **Proteção contra abuso**: Previne ataques de força bruta e DDoS  
+✅ **Qualidade de serviço**: Garante recursos para todos os usuários  
+✅ **Flexível**: Limites diferentes por tipo de operação  
+✅ **Configurável**: Ajuste via variáveis de ambiente  
+✅ **Informativo**: Headers seguem padrões RFC 6585  
+✅ **Transparente**: Logs de rate limit com IP do cliente
+
 ## 🎯 Roadmap
 
 - [x] Logs estruturados com zap
@@ -1041,9 +1170,10 @@ gcloud run services logs read receitas-app --limit=50
 - [x] CRUD completo de Receitas
 - [x] Migrations automáticas (GORM AutoMigrate)
 - [x] Soft Delete
+- [x] Validação de dados (go-playground/validator)
+- [x] Paginação e filtros
+- [x] Rate Limiting (proteção contra abuso)
 - [ ] Relacionamentos (Ingredientes, Categorias, Usuários)
-- [ ] Validação de dados (go-playground/validator)
-- [ ] Paginação e filtros
 - [ ] Busca full-text
 - [ ] Autenticação e autorização (JWT)
 - [ ] Upload de imagens
