@@ -1158,6 +1158,70 @@ Se você escalar para múltiplas instâncias no Railway, a arquitetura está pre
 ✅ **Informativo**: Headers seguem padrões RFC 6585  
 ✅ **Transparente**: Logs de rate limit com IP do cliente
 
+## 🔒 Security Headers
+
+A API implementa headers de segurança seguindo as recomendações da OWASP para proteger contra vulnerabilidades comuns.
+
+### Headers Implementados
+
+| Header | Valor | Proteção |
+|--------|-------|----------|
+| `X-Frame-Options` | DENY | Previne clickjacking |
+| `X-Content-Type-Options` | nosniff | Previne MIME type sniffing |
+| `X-XSS-Protection` | 1; mode=block | Proteção XSS (browsers antigos) |
+| `Strict-Transport-Security` | max-age=31536000 | Force HTTPS por 1 ano |
+| `Content-Security-Policy` | default-src 'none' | Previne XSS e injection |
+| `Referrer-Policy` | strict-origin-when-cross-origin | Controla referrer |
+| `Permissions-Policy` | Desabilita APIs desnecessárias | Limita acesso a features |
+
+### Verificar Headers
+
+```bash
+# Verificar headers em produção
+curl -I https://sua-api.railway.app/health
+
+# Ou com ferramenta de análise
+curl -I https://sua-api.railway.app/health | grep -E "(X-|Strict-|Content-Security|Referrer|Permissions)"
+```
+
+### Score de Segurança
+
+Teste sua API em:
+- [SecurityHeaders.com](https://securityheaders.com)
+- [Mozilla Observatory](https://observatory.mozilla.org)
+
+Resultado esperado: **Nota A** ✅
+
+### Detalhes dos Headers
+
+#### X-Frame-Options: DENY
+Previne que a página seja carregada em um iframe, protegendo contra ataques de clickjacking.
+
+#### X-Content-Type-Options: nosniff
+Impede que o browser tente "adivinhar" o tipo MIME de arquivos, prevenindo ataques baseados em MIME confusion.
+
+#### X-XSS-Protection: 1; mode=block
+Ativa a proteção XSS em browsers antigos que ainda suportam este header (browsers modernos usam CSP).
+
+#### Strict-Transport-Security (HSTS)
+Force o uso de HTTPS por 1 ano, incluindo subdomínios. Só é enviado em conexões HTTPS.
+
+#### Content-Security-Policy
+Define que nenhum recurso externo pode ser carregado, protegendo contra XSS e injection attacks.
+
+#### Referrer-Policy
+Controla quais informações de referrer são enviadas, protegendo privacidade dos usuários.
+
+#### Permissions-Policy
+Desabilita APIs do browser que não são necessárias para uma API REST (geolocation, camera, microphone, etc).
+
+### Compliance
+
+✅ **OWASP Top 10** - Proteção contra vulnerabilidades mais comuns  
+✅ **PCI DSS** - Requisitos de segurança para dados de cartão  
+✅ **GDPR** - Proteção de dados e privacidade  
+✅ **LGPD** - Lei Geral de Proteção de Dados (Brasil)
+
 ## 🎯 Roadmap
 
 - [x] Logs estruturados com zap
@@ -1173,6 +1237,7 @@ Se você escalar para múltiplas instâncias no Railway, a arquitetura está pre
 - [x] Validação de dados (go-playground/validator)
 - [x] Paginação e filtros
 - [x] Rate Limiting (proteção contra abuso)
+- [x] Security Headers (OWASP compliance)
 - [ ] Relacionamentos (Ingredientes, Categorias, Usuários)
 - [ ] Busca full-text
 - [ ] Autenticação e autorização (JWT)

@@ -17,6 +17,7 @@ func Setup() *chi.Mux {
 
 	// Middlewares globais
 	r.Use(customMiddleware.SetupCORS())      // CORS - deve ser o primeiro
+	r.Use(customMiddleware.SecurityHeaders)  // Security headers
 	r.Use(customMiddleware.RequestID)        // Adiciona Request ID a cada requisição
 	
 	// Rate limit global (se habilitado)
