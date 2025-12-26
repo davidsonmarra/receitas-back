@@ -82,15 +82,15 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Gerar token JWT
-	token, err := auth.GenerateToken(user.ID, user.Email)
+	// Gerar token JWT (incluindo role)
+	token, err := auth.GenerateToken(user.ID, user.Email, user.Role)
 	if err != nil {
 		log.ErrorCtx(r.Context(), "failed to generate token", "error", err)
 		response.Error(w, http.StatusInternalServerError, "Erro ao gerar token")
 		return
 	}
 
-	log.InfoCtx(r.Context(), "user registered", "id", user.ID, "email", user.Email)
+	log.InfoCtx(r.Context(), "user registered", "id", user.ID, "email", user.Email, "role", user.Role)
 	
 	authResponse := AuthResponse{
 		User:  user,
@@ -134,15 +134,15 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Gerar token JWT
-	token, err := auth.GenerateToken(user.ID, user.Email)
+	// Gerar token JWT (incluindo role)
+	token, err := auth.GenerateToken(user.ID, user.Email, user.Role)
 	if err != nil {
 		log.ErrorCtx(r.Context(), "failed to generate token", "error", err)
 		response.Error(w, http.StatusInternalServerError, "Erro ao gerar token")
 		return
 	}
 
-	log.InfoCtx(r.Context(), "user logged in", "id", user.ID, "email", user.Email)
+	log.InfoCtx(r.Context(), "user logged in", "id", user.ID, "email", user.Email, "role", user.Role)
 	
 	authResponse := AuthResponse{
 		User:  user,

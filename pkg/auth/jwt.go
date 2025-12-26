@@ -12,6 +12,7 @@ import (
 type Claims struct {
 	UserID uint   `json:"user_id"`
 	Email  string `json:"email"`
+	Role   string `json:"role"` // 'user' ou 'admin'
 	jwt.RegisteredClaims
 }
 
@@ -28,10 +29,12 @@ func init() {
 
 // GenerateToken gera um novo token JWT para o usuário
 // Token expira em 24 horas
-func GenerateToken(userID uint, email string) (string, error) {
+// Inclui role para facilitar verificações rápidas (mas sempre verificar banco para segurança)
+func GenerateToken(userID uint, email string, role string) (string, error) {
 	claims := Claims{
 		UserID: userID,
 		Email:  email,
+		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

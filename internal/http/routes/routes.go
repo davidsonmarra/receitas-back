@@ -64,5 +64,26 @@ func Setup() *chi.Mux {
 		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/{id}", handlers.DeleteRecipe)
 	})
 
+	// Rotas administrativas (requer admin)
+	r.Route("/admin", func(r chi.Router) {
+		// Middleware: RequireAuth + RequireAdmin (defense in depth)
+		r.Use(customMiddleware.RequireAuth, customMiddleware.RequireAdmin)
+
+		// Rotas de receitas admin
+		r.Route("/recipes", func(r chi.Router) {
+			// GET /admin/recipes - listar todas com user info
+			r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/", handlers.AdminListRecipes)
+
+			// POST /admin/recipes/general - criar receita geral
+			r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/general", handlers.AdminCreateGeneralRecipe)
+
+			// PUT /admin/recipes/{id} - editar qualquer receita
+			r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Put("/{id}", handlers.AdminUpdateRecipe)
+
+			// DELETE /admin/recipes/{id} - deletar qualquer receita
+			r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/{id}", handlers.AdminDeleteRecipe)
+		})
+	})
+
 	return r
 }

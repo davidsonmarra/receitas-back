@@ -840,6 +840,128 @@ curl -X PUT http://localhost:8080/recipes/1 \
 - **401 Unauthorized**: Token ausente ou inválido
 - **403 Forbidden**: Tentativa de editar/deletar receita de outro usuário
 
+## 👑 Sistema de Administrador
+
+A API implementa um sistema de RBAC (Role-Based Access Control) com dois níveis de acesso: `user` (padrão) e `admin`.
+
+### Criar Primeiro Admin
+
+Use o script de seed para criar o admin inicial:
+
+```bash
+# Com valores padrão
+go run ./cmd/seed-admin
+
+# Com credenciais customizadas
+ADMIN_EMAIL="admin@example.com" \
+ADMIN_PASSWORD="SenhaForte123!" \
+ADMIN_NAME="Admin Principal" \
+go run ./cmd/seed-admin
+```
+
+**Valores padrão:**
+- Email: `admin@receitas.com`
+- Senha: `admin123`
+- Nome: `Administrador`
+
+⚠️ **IMPORTANTE**: Trocar senha padrão em produção!
+
+### Endpoints Admin
+
+Todos endpoints admin requerem:
+- ✅ Token JWT válido (middleware `RequireAuth`)
+- ✅ Role = admin (middleware `RequireAdmin`)
+
+| Endpoint | Método | Descrição |
+|----------|--------|-----------|
+| `/admin/recipes` | GET | Lista todas receitas com info de usuário |
+| `/admin/recipes/general` | POST | Cria receita geral (sem dono) |
+| `/admin/recipes/{id}` | PUT | Edita qualquer receita |
+| `/admin/recipes/{id}` | DELETE | Deleta qualquer receita |
+
+**Exemplos:**
+
+```bash
+# 1. Criar admin e fazer login
+go run ./cmd/seed-admin
+curl -X POST http://localhost:8080/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@receitas.com","password":"admin123"}'
+
+# 2. Listar todas receitas (com info de usuário)
+curl http://localhost:8080/admin/recipes \
+  -H "Authorization: Bearer TOKEN_ADMIN"
+
+# 3. Criar receita geral (sem dono)
+curl -X POST http://localhost:8080/admin/recipes/general \
+  -H "Authorization: Bearer TOKEN_ADMIN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Receita do Sistema","prep_time":30,"servings":4}'
+
+# 4. Editar receita de qualquer usuário
+curl -X PUT http://localhost:8080/admin/recipes/5 \
+  -H "Authorization: Bearer TOKEN_ADMIN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Editada por Admin"}'
+
+# 5. Deletar qualquer receita
+curl -X DELETE http://localhost:8080/admin/recipes/10 \
+  -H "Authorization: Bearer TOKEN_ADMIN"
+```
+
+### Promover Usuário a Admin
+
+Após criar um usuário, você pode promovê-lo a admin via SQL:
+
+```sql
+-- Via SQL direto
+UPDATE users SET role = 'admin' WHERE email = 'user@example.com';
+
+-- Ou via psql
+psql $DATABASE_URL -c "UPDATE users SET role = 'admin' WHERE email = 'user@example.com';"
+```
+
+**Nota**: Após promoção, o usuário precisa fazer login novamente para obter token com role atualizado.
+
+### Segurança Admin
+
+✅ **RBAC (Role-Based Access Control)**:
+- Controle baseado em roles (user/admin)
+- Verificação em múltiplas camadas (defense in depth)
+- Fail secure (default: deny)
+
+✅ **Auditoria Completa**:
+Todas ações admin são logadas:
+```
+admin access granted user_id=1 path=/admin/recipes method=GET
+admin updated recipe admin_id=1 recipe_id=5 recipe_owner=3
+admin deleted recipe admin_id=1 recipe_id=10 recipe_owner=2 recipe_title="Bolo"
+non-admin attempted admin access user_id=5 role=user path=/admin/recipes method=GET
+```
+
+✅ **Double-check de Role**:
+- JWT contém role (performance)
+- Middleware verifica banco (segurança)
+- Role do banco sempre prevalece
+
+✅ **Protection by Default**:
+- Usuários começam como 'user'
+- Admin via promoção explícita
+- Não há auto-promoção
+
+### Capacidades Admin
+
+Admins podem:
+- ✅ Visualizar todas receitas com informações de usuário
+- ✅ Editar qualquer receita (incluindo receitas de outros usuários)
+- ✅ Deletar qualquer receita
+- ✅ Criar receitas gerais (sem user_id)
+- ✅ Modificar receitas gerais existentes
+
+Usuários normais também podem:
+- ✅ Editar/deletar suas próprias receitas via `/recipes/{id}`
+- ✅ Admins podem usar rotas normais E rotas admin
+
 ## 🔌 Endpoints
 
 ### GET /health

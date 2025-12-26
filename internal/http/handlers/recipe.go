@@ -204,17 +204,17 @@ func DeleteRecipe(w http.ResponseWriter, r *http.Request) {
 
 // canModifyRecipe verifica se o usuário pode modificar a receita
 func canModifyRecipe(recipe *models.Recipe, userID uint) bool {
-	// Se receita tem dono
+	// Verificar se usuário é admin (admin pode modificar qualquer receita)
+	if isAdmin(userID) {
+		return true
+	}
+
+	// Se não é admin, verificar ownership
 	if recipe.UserID != nil {
 		// Apenas o criador pode modificar
 		return *recipe.UserID == userID
-		// TODO: Adicionar verificação de admin quando implementado
-		// return *recipe.UserID == userID || isAdmin(userID)
 	}
 
 	// Receita geral (sem dono) - apenas admin pode modificar
-	// Por enquanto, bloquear modificação
 	return false
-	// TODO: Quando implementar admin, descomentar:
-	// return isAdmin(userID)
 }

@@ -1,7 +1,7 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2025-12-26T14:00:00.000Z",
+  "__export_date": "2025-12-26T16:00:00.000Z",
   "__export_source": "insomnia.desktop.app:v2023.5.8",
   "resources": [
     {
@@ -375,13 +375,141 @@
       "parentId": "fld_recipes"
     },
     {
+      "_id": "fld_admin",
+      "_type": "request_group",
+      "name": "Admin",
+      "description": "Endpoints administrativos - Requerem role = admin",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 4,
+      "parentId": "wrk_receitas_app"
+    },
+    {
+      "_id": "req_admin_list_recipes",
+      "_type": "request",
+      "name": "Admin - List All Recipes",
+      "url": "{{ _.base_url }}/admin/recipes",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_ADMIN_TOKEN_HERE"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Lista todas as receitas com informações de usuário. REQUER ADMIN: Apenas admins podem acessar. Retorna 403 para usuários normais.",
+      "parentId": "fld_admin"
+    },
+    {
+      "_id": "req_admin_create_general",
+      "_type": "request",
+      "name": "Admin - Create General Recipe",
+      "url": "{{ _.base_url }}/admin/recipes/general",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"title\": \"Receita Geral do Sistema\",\n\t\"description\": \"Receita criada pelo sistema, sem dono específico\",\n\t\"prep_time\": 30,\n\t\"servings\": 4,\n\t\"difficulty\": \"média\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_ADMIN_TOKEN_HERE"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Cria receita geral (user_id = null). REQUER ADMIN: Apenas admins podem criar receitas gerais do sistema.",
+      "parentId": "fld_admin"
+    },
+    {
+      "_id": "req_admin_update_recipe",
+      "_type": "request",
+      "name": "Admin - Update Any Recipe",
+      "url": "{{ _.base_url }}/admin/recipes/1",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"title\": \"Editada por Admin\",\n\t\"description\": \"Esta receita foi modificada por um administrador\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_ADMIN_TOKEN_HERE"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Edita qualquer receita, mesmo de outro usuário ou receita geral. REQUER ADMIN: Admin override de ownership.",
+      "parentId": "fld_admin"
+    },
+    {
+      "_id": "req_admin_delete_recipe",
+      "_type": "request",
+      "name": "Admin - Delete Any Recipe",
+      "url": "{{ _.base_url }}/admin/recipes/1",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_ADMIN_TOKEN_HERE"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Deleta qualquer receita (soft delete). REQUER ADMIN: Admin pode deletar receitas de qualquer usuário ou receitas gerais.",
+      "parentId": "fld_admin"
+    },
+    {
       "_id": "fld_rate_limit",
       "_type": "request_group",
       "name": "Rate Limit Tests",
       "description": "Testes de rate limiting - Execute múltiplas vezes para testar limites",
       "environment": {},
       "environmentPropertyOrder": null,
-      "metaSortKey": 4,
+      "metaSortKey": 5,
       "parentId": "wrk_receitas_app"
     },
     {
