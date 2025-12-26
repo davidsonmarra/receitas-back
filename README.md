@@ -8,10 +8,12 @@ Este projeto estabelece a fundação para um serviço backend escrito em Go. A F
 
 ## 🔧 Tecnologias
 
-- **Go**: ≥ 1.23
+- **Go**: ≥ 1.24
 - **Database**: [PostgreSQL](https://www.postgresql.org/) - Database relacional
 - **ORM**: [GORM](https://gorm.io/) v1.31+ - ORM completo para Go
 - **Router**: [go-chi/chi](https://github.com/go-chi/chi) v5
+- **CORS**: [go-chi/cors](https://github.com/go-chi/cors) - Cross-Origin Resource Sharing
+- **Validator**: [go-playground/validator](https://github.com/go-playground/validator) v10 - Validação de structs
 - **Logger**: [uber-go/zap](https://github.com/uber-go/zap) - Alta performance
 - **UUID**: [google/uuid](https://github.com/google/uuid) - Geração de Request IDs
 - **Testes**: testing + httptest
@@ -29,7 +31,9 @@ receitas-app/
 │   │   └── server.go
 │   └── http/
 │       ├── middleware/         # Middlewares HTTP
-│       │   └── requestid.go    # Middleware de Request ID
+│       │   ├── requestid.go    # Middleware de Request ID
+│       │   ├── requestsize.go  # Limite de tamanho de request
+│       │   └── cors.go         # Configuração de CORS
 │       ├── routes/             # Registro de rotas
 │       │   └── routes.go
 │       └── handlers/           # Handlers HTTP
@@ -39,6 +43,8 @@ receitas-app/
 ├── pkg/                        # Utilitários reutilizáveis
 │   ├── database/               # Conexão com database
 │   │   └── connection.go       # PostgreSQL + GORM
+│   ├── validation/             # Sistema de validação
+│   │   └── validator.go        # Validação com traduções PT-BR
 │   ├── log/                    # Sistema de logging
 │   │   ├── logger.go           # API de logging (estilo Android)
 │   │   └── config.go           # Configuração do logger
@@ -228,6 +234,87 @@ Cria testes unitários para handlers HTTP.
 - Separação clara de responsabilidades
 - Código idiomático Go
 - Sem estado global mutável
+
+## 🌐 CORS (Cross-Origin Resource Sharing)
+
+A API implementa CORS para permitir que aplicações web de diferentes domínios consumam a API.
+
+### Configuração
+
+O CORS é configurado automaticamente baseado no ambiente:
+
+#### Development (`ENV != production`)
+```
+Permite origens:
+- http://localhost:* (qualquer porta)
+- http://127.0.0.1:*
+- http://[::1]:*
+```
+
+#### Production (`ENV == production`)
+```
+Permite origens baseado em:
+1. Variável CORS_ORIGINS (recomendado)
+   Exemplo: CORS_ORIGINS="https://app.com,https://admin.app.com"
+
+2. Padrão: https://* (qualquer origem HTTPS)
+```
+
+### Headers Configurados
+
+| Header | Valor | Descrição |
+|--------|-------|-----------|
+| `Access-Control-Allow-Origin` | Baseado em config | Origem permitida |
+| `Access-Control-Allow-Methods` | GET, POST, PUT, DELETE, OPTIONS | Métodos HTTP permitidos |
+| `Access-Control-Allow-Headers` | Accept, Authorization, Content-Type, X-Request-ID | Headers aceitos |
+| `Access-Control-Expose-Headers` | X-Request-ID | Headers expostos ao client |
+| `Access-Control-Allow-Credentials` | false | Cookies não permitidos |
+| `Access-Control-Max-Age` | 300 | Cache de preflight (5 min) |
+
+### React Native
+
+**Importante**: Apps React Native **nativos** (iOS/Android) **não precisam de CORS** pois não rodam em navegador. CORS só se aplica a:
+- React Native Web
+- Expo Web
+- Aplicações web que consumem a API
+
+### Testar CORS
+
+#### Com curl (simular preflight):
+```bash
+curl -H "Origin: http://localhost:3000" \
+     -H "Access-Control-Request-Method: POST" \
+     -H "Access-Control-Request-Headers: Content-Type" \
+     -X OPTIONS \
+     https://receitas-back-production.up.railway.app/recipes -v
+```
+
+#### Resposta esperada:
+```
+< HTTP/2 200
+< access-control-allow-origin: http://localhost:3000
+< access-control-allow-methods: POST
+< access-control-allow-headers: Content-Type
+< access-control-max-age: 300
+```
+
+#### No navegador:
+```javascript
+fetch('https://receitas-back-production.up.railway.app/recipes')
+  .then(res => res.json())
+  .then(data => console.log('✅ CORS funcionando!', data))
+  .catch(err => console.error('❌ Erro:', err))
+```
+
+### Configurar para Produção
+
+Adicione a variável de ambiente no Railway:
+
+```bash
+CORS_ORIGINS=https://seu-frontend.vercel.app,https://seu-dominio.com
+```
+
+**Atenção**: Nunca use `*` em produção com `AllowCredentials: true`.
 
 ## ✅ Validação de Inputs
 
