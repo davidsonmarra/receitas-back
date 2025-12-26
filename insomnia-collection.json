@@ -118,7 +118,7 @@
     {
       "_id": "req_list_recipes",
       "_type": "request",
-      "name": "List Recipes",
+      "name": "List Recipes (Paginated - Default)",
       "url": "{{ _.base_url }}/recipes",
       "method": "GET",
       "body": {},
@@ -133,7 +133,67 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Lista todas as receitas",
+      "description": "Lista receitas com paginação padrão (page=1, limit=20)",
+      "parentId": "fld_recipes"
+    },
+    {
+      "_id": "req_list_recipes_page2",
+      "_type": "request",
+      "name": "List Recipes (Page 2)",
+      "url": "{{ _.base_url }}/recipes?page=2&limit=10",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "page",
+          "value": "2"
+        },
+        {
+          "name": "limit",
+          "value": "10"
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 2.5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Lista receitas da página 2 com 10 itens por página",
+      "parentId": "fld_recipes"
+    },
+    {
+      "_id": "req_list_recipes_custom",
+      "_type": "request",
+      "name": "List Recipes (Custom Limit)",
+      "url": "{{ _.base_url }}/recipes?page=1&limit=50",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "page",
+          "value": "1"
+        },
+        {
+          "name": "limit",
+          "value": "50"
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 2.6,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Lista receitas com limite customizado de 50 itens",
       "parentId": "fld_recipes"
     },
     {

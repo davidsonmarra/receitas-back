@@ -9,6 +9,7 @@ import (
 	"github.com/davidsonmarra/receitas-app/internal/models"
 	"github.com/davidsonmarra/receitas-app/pkg/database"
 	"github.com/davidsonmarra/receitas-app/pkg/log"
+	"github.com/davidsonmarra/receitas-app/pkg/pagination"
 	"github.com/davidsonmarra/receitas-app/pkg/response"
 	"github.com/davidsonmarra/receitas-app/pkg/validation"
 )
@@ -39,17 +40,33 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusCreated, recipe)
 }
 
-// ListRecipes lista todas as receitas
+// ListRecipes lista todas as receitas com paginação
 func ListRecipes(w http.ResponseWriter, r *http.Request) {
-	var recipes []models.Recipe
+	// Extrair parâmetros de paginação
+	params := pagination.ExtractParams(r)
 
-	if err := database.DB.Find(&recipes).Error; err != nil {
+	// Count total de receitas
+	var total int64
+	if err := database.DB.Model(&models.Recipe{}).Count(&total).Error; err != nil {
+		log.ErrorCtx(r.Context(), "failed to count recipes", "error", err)
+		response.Error(w, http.StatusInternalServerError, "Failed to count recipes")
+		return
+	}
+
+	// Buscar receitas paginadas
+	var recipes []models.Recipe
+	offset := pagination.CalculateOffset(params)
+	if err := database.DB.Limit(params.Limit).Offset(offset).
+		Order("created_at DESC").
+		Find(&recipes).Error; err != nil {
 		log.ErrorCtx(r.Context(), "failed to list recipes", "error", err)
 		response.Error(w, http.StatusInternalServerError, "Failed to list recipes")
 		return
 	}
 
-	response.JSON(w, http.StatusOK, recipes)
+	// Montar resposta paginada
+	paginatedResponse := pagination.BuildResponse(recipes, params, total)
+	response.JSON(w, http.StatusOK, paginatedResponse)
 }
 
 // GetRecipe busca uma receita por ID

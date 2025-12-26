@@ -316,6 +316,216 @@ CORS_ORIGINS=https://seu-frontend.vercel.app,https://seu-dominio.com
 
 **Atenção**: Nunca use `*` em produção com `AllowCredentials: true`.
 
+## 📄 Paginação
+
+A API implementa paginação reutilizável em todos os endpoints que retornam listas, otimizada para performance em apps móveis.
+
+### Como Usar
+
+Adicione os parâmetros `page` e `limit` na query string:
+
+```bash
+GET /recipes?page=1&limit=20
+```
+
+### Parâmetros
+
+| Parâmetro | Tipo | Padrão | Mín | Máx | Descrição |
+|-----------|------|--------|-----|-----|-----------|
+| `page` | int | 1 | 1 | ∞ | Número da página |
+| `limit` | int | 20 | 1 | 100 | Itens por página |
+
+### Validação Automática
+
+A API valida e corrige automaticamente parâmetros inválidos:
+
+| Entrada | Corrigido para | Motivo |
+|---------|----------------|--------|
+| `?page=0` | `page=1` | Mínimo é 1 |
+| `?page=-5` | `page=1` | Mínimo é 1 |
+| `?limit=0` | `limit=20` | Mínimo é 1 |
+| `?limit=500` | `limit=100` | Máximo é 100 |
+| `?page=abc` | `page=1` | Inválido, usa padrão |
+
+### Formato de Resposta
+
+Todas as respostas paginadas seguem o mesmo formato:
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "title": "Bolo de Chocolate",
+      "description": "Delicioso bolo",
+      "prep_time": 60,
+      "servings": 8,
+      "difficulty": "média",
+      "created_at": "2025-12-24T10:30:45Z",
+      "updated_at": "2025-12-24T10:30:45Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 150,
+    "total_pages": 8,
+    "has_next": true,
+    "has_prev": false
+  }
+}
+```
+
+### Metadata de Paginação
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `page` | int | Página atual |
+| `limit` | int | Itens por página |
+| `total` | int64 | Total de registros |
+| `total_pages` | int | Total de páginas |
+| `has_next` | bool | Tem próxima página? |
+| `has_prev` | bool | Tem página anterior? |
+
+### Exemplos
+
+#### Primeira página (padrão)
+```bash
+GET /recipes
+# Retorna 20 primeiros itens
+```
+
+#### Segunda página
+```bash
+GET /recipes?page=2&limit=10
+# Retorna itens 11-20 (10 por página)
+```
+
+#### Limite customizado
+```bash
+GET /recipes?page=1&limit=50
+# Retorna 50 primeiros itens
+```
+
+### Uso no React Native
+
+#### Scroll Infinito
+
+```javascript
+const [recipes, setRecipes] = useState([]);
+const [page, setPage] = useState(1);
+const [hasNext, setHasNext] = useState(true);
+const [loading, setLoading] = useState(false);
+
+const loadMore = async () => {
+  if (!hasNext || loading) return;
+  
+  setLoading(true);
+  try {
+    const response = await fetch(
+      `${API_URL}/recipes?page=${page}&limit=20`
+    );
+    const data = await response.json();
+    
+    setRecipes([...recipes, ...data.data]);
+    setHasNext(data.pagination.has_next);
+    setPage(page + 1);
+  } catch (error) {
+    console.error('Erro ao carregar receitas:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// No FlatList
+<FlatList
+  data={recipes}
+  onEndReached={loadMore}
+  onEndReachedThreshold={0.5}
+/>
+```
+
+#### Pull to Refresh
+
+```javascript
+const [refreshing, setRefreshing] = useState(false);
+
+const onRefresh = async () => {
+  setRefreshing(true);
+  try {
+    const response = await fetch(`${API_URL}/recipes?page=1&limit=20`);
+    const data = await response.json();
+    
+    setRecipes(data.data);
+    setPage(1);
+    setHasNext(data.pagination.has_next);
+  } catch (error) {
+    console.error('Erro ao atualizar:', error);
+  } finally {
+    setRefreshing(false);
+  }
+};
+
+<FlatList
+  data={recipes}
+  refreshing={refreshing}
+  onRefresh={onRefresh}
+/>
+```
+
+### Performance
+
+#### Otimizações Implementadas
+
+1. **Queries Separadas**
+   - Count query otimizada (sem SELECT *)
+   - Data query com LIMIT/OFFSET
+   
+2. **Índice em created_at**
+   - Ordenação rápida (< 10ms)
+   - Funciona mesmo com milhares de registros
+
+3. **Limit máximo de 100**
+   - Previne requests gigantes
+   - Protege memória e bandwidth
+
+4. **Default baixo (20 itens)**
+   - Ideal para scroll infinito
+   - Menos dados transferidos
+
+#### Benchmark Esperado
+
+| Cenário | Tempo Estimado |
+|---------|----------------|
+| 100 receitas, page 1 | < 50ms |
+| 10.000 receitas, page 1 | < 100ms |
+| 10.000 receitas, page 500 | < 150ms |
+
+### Reutilização
+
+Para adicionar paginação em qualquer endpoint futuro:
+
+```go
+func ListUsers(w http.ResponseWriter, r *http.Request) {
+    // 1. Extrair parâmetros
+    params := pagination.ExtractParams(r)
+    
+    // 2. Count total
+    var total int64
+    database.DB.Model(&models.User{}).Count(&total)
+    
+    // 3. Buscar dados paginados
+    var users []models.User
+    offset := pagination.CalculateOffset(params)
+    database.DB.Limit(params.Limit).Offset(offset).Find(&users)
+    
+    // 4. Retornar resposta paginada
+    response.Paginated(w, http.StatusOK, users, params, total)
+}
+```
+
+**Apenas 3 linhas de código!** ✅
+
 ## ✅ Validação de Inputs
 
 A API implementa validação robusta de dados de entrada usando `validator/v10` com mensagens amigáveis em português, projetadas para serem exibidas diretamente no frontend.

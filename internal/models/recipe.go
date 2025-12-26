@@ -14,7 +14,7 @@ type Recipe struct {
 	PrepTime    int            `gorm:"not null" json:"prep_time" validate:"required,min=1"` // minutos
 	Servings    int            `gorm:"not null;default:1" json:"servings" validate:"required,min=1"`
 	Difficulty  string         `gorm:"size:50" json:"difficulty" validate:"omitempty,oneof=fácil média difícil"`
-	CreatedAt   time.Time      `json:"created_at"`
+	CreatedAt   time.Time      `gorm:"index" json:"created_at"` // Índice para ordenação rápida
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }

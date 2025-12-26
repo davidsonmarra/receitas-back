@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/davidsonmarra/receitas-app/pkg/log"
+	"github.com/davidsonmarra/receitas-app/pkg/pagination"
 )
 
 // JSON escreve uma resposta JSON com o status code especificado
@@ -32,4 +33,10 @@ func ValidationError(w http.ResponseWriter, message string) {
 			"message": message,
 		},
 	})
+}
+
+// Paginated escreve uma resposta JSON paginada
+func Paginated(w http.ResponseWriter, statusCode int, data interface{}, params pagination.Params, total int64) {
+	response := pagination.BuildResponse(data, params, total)
+	JSON(w, statusCode, response)
 }
