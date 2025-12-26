@@ -1,7 +1,7 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2025-12-26T12:00:00.000Z",
+  "__export_date": "2025-12-26T14:00:00.000Z",
   "__export_source": "insomnia.desktop.app:v2023.5.8",
   "resources": [
     {
@@ -195,6 +195,10 @@
         {
           "name": "Content-Type",
           "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_TOKEN_HERE"
         }
       ],
       "authentication": {},
@@ -206,7 +210,7 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Cria uma nova receita",
+      "description": "Cria uma nova receita. REQUER AUTENTICAÇÃO: Adicione o token JWT no header Authorization. A receita será automaticamente atribuída ao usuário autenticado (user_id).",
       "parentId": "fld_recipes"
     },
     {
@@ -326,6 +330,10 @@
         {
           "name": "Content-Type",
           "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_TOKEN_HERE"
         }
       ],
       "authentication": {},
@@ -337,7 +345,7 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Atualiza uma receita existente",
+      "description": "Atualiza uma receita existente. REQUER AUTENTICAÇÃO: Apenas o criador da receita pode editá-la. Retorna 403 Forbidden se tentar editar receita de outro usuário.",
       "parentId": "fld_recipes"
     },
     {
@@ -348,7 +356,12 @@
       "method": "DELETE",
       "body": {},
       "parameters": [],
-      "headers": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_TOKEN_HERE"
+        }
+      ],
       "authentication": {},
       "metaSortKey": 5,
       "isPrivate": false,
@@ -358,7 +371,7 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Deleta uma receita (soft delete)",
+      "description": "Deleta uma receita (soft delete). REQUER AUTENTICAÇÃO: Apenas o criador da receita pode deletá-la. Retorna 403 Forbidden se tentar deletar receita de outro usuário.",
       "parentId": "fld_recipes"
     },
     {

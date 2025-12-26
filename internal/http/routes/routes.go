@@ -46,20 +46,22 @@ func Setup() *chi.Mux {
 
 	// Rotas de receitas com rate limiting específico
 	r.Route("/recipes", func(r chi.Router) {
+		// Rotas públicas (sem autenticação)
 		// GET /recipes - rate limit de leitura
 		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/", handlers.ListRecipes)
-		
-		// POST /recipes - rate limit de escrita
-		r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/", handlers.CreateRecipe)
 		
 		// GET /recipes/{id} - rate limit de leitura
 		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/{id}", handlers.GetRecipe)
 		
-		// PUT /recipes/{id} - rate limit de escrita
-		r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Put("/{id}", handlers.UpdateRecipe)
+		// Rotas protegidas (requer autenticação)
+		// POST /recipes - requer auth + rate limit de escrita
+		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/", handlers.CreateRecipe)
 		
-		// DELETE /recipes/{id} - rate limit de escrita
-		r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/{id}", handlers.DeleteRecipe)
+		// PUT /recipes/{id} - requer auth + rate limit de escrita
+		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Put("/{id}", handlers.UpdateRecipe)
+		
+		// DELETE /recipes/{id} - requer auth + rate limit de escrita
+		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/{id}", handlers.DeleteRecipe)
 	})
 
 	return r

@@ -806,10 +806,39 @@ curl -H "Authorization: Bearer SEU_TOKEN_AQUI" \
 
 A API suporta dois tipos de receitas:
 
-1. **Receitas Gerais**: Sem `user_id` (criadas pelo sistema/admin)
-2. **Receitas Personalizadas**: Com `user_id` (criadas por usuários)
+1. **Receitas Gerais**: Sem `user_id` (apenas admins podem editar/deletar)
+2. **Receitas Personalizadas**: Com `user_id` (criadas por usuários autenticados)
 
-Futuramente, receitas personalizadas só poderão ser editadas/deletadas pelo próprio criador.
+#### Autorização de Receitas
+
+✅ **Criar receitas**: Requer autenticação (sempre terá `user_id`)  
+✅ **Listar/Visualizar**: Público (sem autenticação)  
+✅ **Editar/Deletar receitas próprias**: Apenas o criador  
+✅ **Editar/Deletar receitas gerais**: Apenas admins (preparado para futuro)
+
+**Exemplos:**
+
+```bash
+# Criar receita (requer token)
+curl -X POST http://localhost:8080/recipes \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Minha Receita","prep_time":30,"servings":4}'
+
+# Listar receitas (público)
+curl http://localhost:8080/recipes
+
+# Editar receita própria (requer token)
+curl -X PUT http://localhost:8080/recipes/1 \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Receita Atualizada"}'
+```
+
+**Respostas de Autorização:**
+
+- **401 Unauthorized**: Token ausente ou inválido
+- **403 Forbidden**: Tentativa de editar/deletar receita de outro usuário
 
 ## 🔌 Endpoints
 

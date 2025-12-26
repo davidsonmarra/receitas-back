@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/davidsonmarra/receitas-app/internal/http/middleware"
 	"github.com/davidsonmarra/receitas-app/internal/models"
 	"github.com/davidsonmarra/receitas-app/pkg/database"
 	"github.com/davidsonmarra/receitas-app/pkg/log"
@@ -30,13 +31,23 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Obter userID do contexto (adicionado pelo middleware RequireAuth)
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "Autenticação necessária")
+		return
+	}
+
+	// Atribuir criador à receita
+	recipe.UserID = &userID
+
 	if err := database.DB.Create(&recipe).Error; err != nil {
 		log.ErrorCtx(r.Context(), "failed to create recipe", "error", err)
 		response.Error(w, http.StatusInternalServerError, "Failed to create recipe")
 		return
 	}
 
-	log.InfoCtx(r.Context(), "recipe created", "id", recipe.ID)
+	log.InfoCtx(r.Context(), "recipe created", "id", recipe.ID, "user_id", userID)
 	response.JSON(w, http.StatusCreated, recipe)
 }
 
@@ -95,10 +106,23 @@ type UpdateRecipeRequest struct {
 func UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
+	// Obter userID do contexto
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "Autenticação necessária")
+		return
+	}
+
 	// Buscar receita existente
 	var recipe models.Recipe
 	if err := database.DB.First(&recipe, id).Error; err != nil {
 		response.Error(w, http.StatusNotFound, "Recipe not found")
+		return
+	}
+
+	// Verificar autorização
+	if !canModifyRecipe(&recipe, userID) {
+		response.Error(w, http.StatusForbidden, "Você não tem permissão para modificar esta receita")
 		return
 	}
 
@@ -140,7 +164,7 @@ func UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.InfoCtx(r.Context(), "recipe updated", "id", recipe.ID)
+	log.InfoCtx(r.Context(), "recipe updated", "id", recipe.ID, "user_id", userID)
 	response.JSON(w, http.StatusOK, recipe)
 }
 
@@ -148,12 +172,49 @@ func UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 func DeleteRecipe(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	if err := database.DB.Delete(&models.Recipe{}, id).Error; err != nil {
+	// Obter userID do contexto
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "Autenticação necessária")
+		return
+	}
+
+	// Buscar receita existente antes de deletar
+	var recipe models.Recipe
+	if err := database.DB.First(&recipe, id).Error; err != nil {
+		response.Error(w, http.StatusNotFound, "Recipe not found")
+		return
+	}
+
+	// Verificar autorização
+	if !canModifyRecipe(&recipe, userID) {
+		response.Error(w, http.StatusForbidden, "Você não tem permissão para deletar esta receita")
+		return
+	}
+
+	if err := database.DB.Delete(&recipe, id).Error; err != nil {
 		log.ErrorCtx(r.Context(), "failed to delete recipe", "error", err)
 		response.Error(w, http.StatusInternalServerError, "Failed to delete recipe")
 		return
 	}
 
-	log.InfoCtx(r.Context(), "recipe deleted", "id", id)
+	log.InfoCtx(r.Context(), "recipe deleted", "id", id, "user_id", userID)
 	response.JSON(w, http.StatusOK, map[string]string{"message": "Recipe deleted"})
+}
+
+// canModifyRecipe verifica se o usuário pode modificar a receita
+func canModifyRecipe(recipe *models.Recipe, userID uint) bool {
+	// Se receita tem dono
+	if recipe.UserID != nil {
+		// Apenas o criador pode modificar
+		return *recipe.UserID == userID
+		// TODO: Adicionar verificação de admin quando implementado
+		// return *recipe.UserID == userID || isAdmin(userID)
+	}
+
+	// Receita geral (sem dono) - apenas admin pode modificar
+	// Por enquanto, bloquear modificação
+	return false
+	// TODO: Quando implementar admin, descomentar:
+	// return isAdmin(userID)
 }
