@@ -229,6 +229,145 @@ Cria testes unitários para handlers HTTP.
 - Código idiomático Go
 - Sem estado global mutável
 
+## ✅ Validação de Inputs
+
+A API implementa validação robusta de dados de entrada usando `validator/v10` com mensagens amigáveis em português, projetadas para serem exibidas diretamente no frontend.
+
+### Formato de Erro
+
+Todos os erros de validação retornam a seguinte estrutura (apenas o **primeiro erro** encontrado):
+
+```json
+{
+  "error": {
+    "title": "Ops, algo deu errado!",
+    "message": "O título é obrigatório."
+  }
+}
+```
+
+**Status**: 400 Bad Request  
+**Content-Type**: application/json
+
+> **Nota**: Se múltiplos campos forem inválidos, apenas o primeiro erro será retornado. Corrija-o e envie novamente para ver o próximo erro, se houver.
+
+### Regras de Validação
+
+#### Recipe (Receita)
+
+| Campo | Obrigatório | Regras | Descrição |
+|-------|-------------|--------|-----------|
+| `title` | ✅ Sim | 3-200 caracteres | Título da receita |
+| `description` | ❌ Não | Texto livre | Descrição detalhada |
+| `prep_time` | ✅ Sim | Mínimo: 1 minuto | Tempo de preparo |
+| `servings` | ✅ Sim | Mínimo: 1 porção | Número de porções |
+| `difficulty` | ❌ Não | `fácil`, `média`, `difícil` | Nível de dificuldade |
+
+### Proteção de Campos
+
+No **UPDATE** (`PUT /recipes/{id}`), os seguintes campos são **protegidos** e não podem ser modificados:
+
+- `id` - ID da receita
+- `created_at` - Data de criação
+- `updated_at` - Data de atualização (gerenciada automaticamente)
+- `deleted_at` - Data de exclusão (soft delete)
+
+### Limite de Requisição
+
+- **Tamanho máximo do body**: 1MB
+- **Timeout**: 15 segundos
+
+Se o body exceder 1MB, a API retorna:
+
+```json
+{
+  "error": {
+    "title": "Ops, algo deu errado!",
+    "message": "A requisição é muito grande. Limite: 1MB."
+  }
+}
+```
+
+### Exemplos de Erros
+
+#### Campo obrigatório ausente
+
+```bash
+POST /recipes
+{
+  "prep_time": 30,
+  "servings": 4
+}
+```
+
+**Resposta**:
+
+```json
+{
+  "error": {
+    "title": "Ops, algo deu errado!",
+    "message": "O título é obrigatório."
+  }
+}
+```
+
+#### Múltiplos campos inválidos
+
+```bash
+POST /recipes
+{
+  "title": "AB",
+  "prep_time": 0,
+  "servings": -1
+}
+```
+
+**Resposta** (retorna apenas o primeiro erro):
+
+```json
+{
+  "error": {
+    "title": "Ops, algo deu errado!",
+    "message": "O título deve ter no mínimo 3 caracteres."
+  }
+}
+```
+
+Após corrigir o título e enviar novamente, o próximo erro será exibido (prep_time).
+
+#### Valor inválido
+
+```bash
+POST /recipes
+{
+  "title": "Bolo de Chocolate",
+  "prep_time": 30,
+  "servings": 4,
+  "difficulty": "impossível"
+}
+```
+
+**Resposta**:
+
+```json
+{
+  "error": {
+    "title": "Ops, algo deu errado!",
+    "message": "A dificuldade deve ser uma das opções: fácil, média, difícil."
+  }
+}
+```
+
+### Implementação
+
+A validação é realizada em três camadas:
+
+1. **Middleware de Request Size** - Limita tamanho do body antes de processar
+2. **Validação Estrutural** - Verifica tipos e formatos JSON
+3. **Validação de Negócio** - Aplica regras de negócio (mínimos, máximos, opções)
+
+Pacote: [`pkg/validation`](pkg/validation/validator.go)
+
 ## 🔌 Endpoints
 
 ### GET /health

@@ -13,8 +13,9 @@ func Setup() *chi.Mux {
 	r := chi.NewRouter()
 
 	// Middlewares
-	r.Use(customMiddleware.RequestID) // Adiciona Request ID a cada requisição
-	r.Use(middleware.Recoverer)       // Recupera de panics
+	r.Use(customMiddleware.RequestID)      // Adiciona Request ID a cada requisição
+	r.Use(customMiddleware.RequestSizeLimit) // Limita tamanho do body da requisição
+	r.Use(middleware.Recoverer)            // Recupera de panics
 
 	// Rotas
 	r.Get("/health", handlers.HealthHandler) // Health check endpoint

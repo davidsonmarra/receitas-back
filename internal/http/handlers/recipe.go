@@ -10,6 +10,7 @@ import (
 	"github.com/davidsonmarra/receitas-app/pkg/database"
 	"github.com/davidsonmarra/receitas-app/pkg/log"
 	"github.com/davidsonmarra/receitas-app/pkg/response"
+	"github.com/davidsonmarra/receitas-app/pkg/validation"
 )
 
 // CreateRecipe cria uma nova receita
@@ -17,7 +18,14 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	var recipe models.Recipe
 
 	if err := json.NewDecoder(r.Body).Decode(&recipe); err != nil {
-		response.Error(w, http.StatusBadRequest, "Invalid request body")
+		response.ValidationError(w, "Formato de dados inválido.")
+		return
+	}
+
+	// Validar os dados
+	if errs := validation.ValidateStruct(recipe); errs != nil {
+		message := validation.FormatErrors(errs)
+		response.ValidationError(w, message)
 		return
 	}
 
@@ -57,21 +65,58 @@ func GetRecipe(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, recipe)
 }
 
+// UpdateRecipeRequest representa os dados permitidos para atualização
+type UpdateRecipeRequest struct {
+	Title       *string `json:"title" validate:"omitempty,min=3,max=200"`
+	Description *string `json:"description"`
+	PrepTime    *int    `json:"prep_time" validate:"omitempty,min=1"`
+	Servings    *int    `json:"servings" validate:"omitempty,min=1"`
+	Difficulty  *string `json:"difficulty" validate:"omitempty,oneof=fácil média difícil"`
+}
+
 // UpdateRecipe atualiza uma receita
 func UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
+	// Buscar receita existente
 	var recipe models.Recipe
 	if err := database.DB.First(&recipe, id).Error; err != nil {
 		response.Error(w, http.StatusNotFound, "Recipe not found")
 		return
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&recipe); err != nil {
-		response.Error(w, http.StatusBadRequest, "Invalid request body")
+	// Decodificar para struct de update (sem campos protegidos)
+	var updateReq UpdateRecipeRequest
+	if err := json.NewDecoder(r.Body).Decode(&updateReq); err != nil {
+		response.ValidationError(w, "Formato de dados inválido.")
 		return
 	}
 
+	// Validar os dados
+	if errs := validation.ValidateStruct(updateReq); errs != nil {
+		message := validation.FormatErrors(errs)
+		response.ValidationError(w, message)
+		return
+	}
+
+	// Aplicar apenas os campos que foram enviados
+	if updateReq.Title != nil {
+		recipe.Title = *updateReq.Title
+	}
+	if updateReq.Description != nil {
+		recipe.Description = *updateReq.Description
+	}
+	if updateReq.PrepTime != nil {
+		recipe.PrepTime = *updateReq.PrepTime
+	}
+	if updateReq.Servings != nil {
+		recipe.Servings = *updateReq.Servings
+	}
+	if updateReq.Difficulty != nil {
+		recipe.Difficulty = *updateReq.Difficulty
+	}
+
+	// Salvar no banco
 	if err := database.DB.Save(&recipe).Error; err != nil {
 		log.ErrorCtx(r.Context(), "failed to update recipe", "error", err)
 		response.Error(w, http.StatusInternalServerError, "Failed to update recipe")
