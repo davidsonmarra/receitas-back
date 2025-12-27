@@ -1,7 +1,7 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2025-12-26T16:00:00.000Z",
+  "__export_date": "2025-12-26T18:00:00.000Z",
   "__export_source": "insomnia.desktop.app:v2023.5.8",
   "resources": [
     {
@@ -503,13 +503,274 @@
       "parentId": "fld_admin"
     },
     {
+      "_id": "fld_ingredients",
+      "_type": "request_group",
+      "name": "Ingredients",
+      "description": "Endpoints de ingredientes e informações nutricionais",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 5,
+      "parentId": "wrk_receitas_app"
+    },
+    {
+      "_id": "req_list_ingredients",
+      "_type": "request",
+      "name": "List Ingredients",
+      "url": "{{ _.base_url }}/ingredients?page=1&limit=20",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Lista todos ingredientes com paginação e filtros opcionais (search, category).",
+      "parentId": "fld_ingredients"
+    },
+    {
+      "_id": "req_search_ingredients",
+      "_type": "request",
+      "name": "Search Ingredients",
+      "url": "{{ _.base_url }}/ingredients?search=tomate&category=vegetais",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Busca ingredientes por nome e categoria.",
+      "parentId": "fld_ingredients"
+    },
+    {
+      "_id": "req_get_ingredient",
+      "_type": "request",
+      "name": "Get Ingredient",
+      "url": "{{ _.base_url }}/ingredients/1",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Busca um ingrediente por ID.",
+      "parentId": "fld_ingredients"
+    },
+    {
+      "_id": "req_get_categories",
+      "_type": "request",
+      "name": "Get Categories",
+      "url": "{{ _.base_url }}/ingredients/categories",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Lista todas as categorias disponíveis de ingredientes.",
+      "parentId": "fld_ingredients"
+    },
+    {
+      "_id": "req_add_recipe_ingredient",
+      "_type": "request",
+      "name": "Add Ingredient to Recipe",
+      "url": "{{ _.base_url }}/recipes/1/ingredients",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"ingredient_id\": 1,\n\t\"quantity\": 200,\n\t\"unit\": \"g\",\n\t\"notes\": \"picado\",\n\t\"order\": 1\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_TOKEN_HERE"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Adiciona ingrediente a uma receita. Requer autenticação e ownership da receita.",
+      "parentId": "fld_ingredients"
+    },
+    {
+      "_id": "req_list_recipe_ingredients",
+      "_type": "request",
+      "name": "List Recipe Ingredients",
+      "url": "{{ _.base_url }}/recipes/1/ingredients",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 6,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Lista todos ingredientes de uma receita específica (público).",
+      "parentId": "fld_ingredients"
+    },
+    {
+      "_id": "req_get_recipe_nutrition",
+      "_type": "request",
+      "name": "Get Recipe Nutrition",
+      "url": "{{ _.base_url }}/recipes/1/nutrition",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 7,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Calcula informações nutricionais totais e por porção da receita.",
+      "parentId": "fld_ingredients"
+    },
+    {
+      "_id": "req_update_recipe_ingredient",
+      "_type": "request",
+      "name": "Update Recipe Ingredient",
+      "url": "{{ _.base_url }}/recipes/1/ingredients/1",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"quantity\": 300,\n\t\"notes\": \"cortado em cubos\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_TOKEN_HERE"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 8,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Atualiza quantidade/unidade de ingrediente na receita. Requer autenticação.",
+      "parentId": "fld_ingredients"
+    },
+    {
+      "_id": "req_delete_recipe_ingredient",
+      "_type": "request",
+      "name": "Delete Recipe Ingredient",
+      "url": "{{ _.base_url }}/recipes/1/ingredients/1",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_TOKEN_HERE"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 9,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Remove ingrediente da receita. Requer autenticação.",
+      "parentId": "fld_ingredients"
+    },
+    {
+      "_id": "req_admin_create_ingredient",
+      "_type": "request",
+      "name": "Admin - Create Ingredient",
+      "url": "{{ _.base_url }}/admin/ingredients",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"name\": \"Ingrediente Novo\",\n\t\"calories\": 100,\n\t\"protein\": 5.0,\n\t\"carbs\": 20.0,\n\t\"fat\": 2.0,\n\t\"fiber\": 3.0,\n\t\"category\": \"outros\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer YOUR_ADMIN_TOKEN_HERE"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 10,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Cria novo ingrediente na base. REQUER ADMIN.",
+      "parentId": "fld_ingredients"
+    },
+    {
       "_id": "fld_rate_limit",
       "_type": "request_group",
       "name": "Rate Limit Tests",
       "description": "Testes de rate limiting - Execute múltiplas vezes para testar limites",
       "environment": {},
       "environmentPropertyOrder": null,
-      "metaSortKey": 5,
+      "metaSortKey": 6,
       "parentId": "wrk_receitas_app"
     },
     {

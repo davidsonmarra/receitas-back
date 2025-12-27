@@ -46,7 +46,12 @@ func main() {
 
 	// Auto migrate (criar/atualizar tabelas)
 	log.Info("running database migrations")
-	if err := database.DB.AutoMigrate(&models.User{}, &models.Recipe{}); err != nil {
+	if err := database.DB.AutoMigrate(
+		&models.User{},
+		&models.Recipe{},
+		&models.Ingredient{},
+		&models.RecipeIngredient{},
+	); err != nil {
 		log.Error("failed to migrate database", "error", err)
 		os.Exit(1)
 	}

@@ -962,6 +962,251 @@ Usuários normais também podem:
 - ✅ Editar/deletar suas próprias receitas via `/recipes/{id}`
 - ✅ Admins podem usar rotas normais E rotas admin
 
+## 🥗 Ingredientes e Informações Nutricionais
+
+A API oferece um sistema completo de ingredientes com informações nutricionais baseadas na Tabela TACO (Brasileira) e dados complementares.
+
+### Base de Dados
+
+**Fonte Primária:** Tabela Brasileira de Composição de Alimentos (TACO) - Unicamp
+- ✅ ~500 ingredientes em português
+- ✅ Dados nutricionais validados cientificamente
+- ✅ Alimentos brasileiros (arroz, feijão, açaí, etc)
+- ✅ Valores por 100g do alimento
+
+**Informações Nutricionais:**
+- Calorias (kcal)
+- Proteínas (g)
+- Carboidratos (g)
+- Gorduras (g)
+- Fibras (g)
+
+### Listar Ingredientes
+
+```bash
+GET /ingredients?search=tomate&category=vegetais&page=1&limit=20
+```
+
+**Filtros disponíveis:**
+- `search`: Busca por nome (português ou inglês)
+- `category`: Filtrar por categoria
+- `page`/`limit`: Paginação
+
+**Exemplo de resposta:**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Tomate",
+      "name_en": "",
+      "calories": 15,
+      "protein": 1.1,
+      "carbs": 3.1,
+      "fat": 0.2,
+      "fiber": 1.2,
+      "category": "vegetais",
+      "unit": "g",
+      "source": "taco",
+      "created_at": "2025-12-26T..."
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 500
+  }
+}
+```
+
+### Categorias Disponíveis
+
+```bash
+GET /ingredients/categories
+```
+
+**Principais categorias:**
+- cereais
+- leguminosas
+- carnes
+- vegetais
+- frutas
+- laticínios
+- óleos
+- gorduras
+- açúcares
+- temperos
+- molhos
+- oleaginosas
+
+### Adicionar Ingredientes à Receita
+
+```bash
+POST /recipes/{id}/ingredients
+Authorization: Bearer TOKEN
+Content-Type: application/json
+
+{
+  "ingredient_id": 1,
+  "quantity": 200,
+  "unit": "g",
+  "notes": "picado",
+  "order": 1
+}
+```
+
+**Resposta (201 Created):**
+
+```json
+{
+  "id": 1,
+  "recipe_id": 5,
+  "ingredient_id": 1,
+  "ingredient": {
+    "id": 1,
+    "name": "Tomate",
+    "calories": 15,
+    "protein": 1.1,
+    "carbs": 3.1,
+    "fat": 0.2,
+    "fiber": 1.2,
+    "category": "vegetais"
+  },
+  "quantity": 200,
+  "unit": "g",
+  "notes": "picado",
+  "order": 1
+}
+```
+
+### Listar Ingredientes de uma Receita
+
+```bash
+GET /recipes/{id}/ingredients
+```
+
+**Resposta (200 OK):**
+
+```json
+[
+  {
+    "id": 1,
+    "recipe_id": 5,
+    "ingredient_id": 1,
+    "ingredient": {
+      "id": 1,
+      "name": "Tomate",
+      "calories": 15,
+      ...
+    },
+    "quantity": 200,
+    "unit": "g",
+    "notes": "picado",
+    "order": 1
+  }
+]
+```
+
+### Cálculo Nutricional Automático
+
+```bash
+GET /recipes/{id}/nutrition
+```
+
+Retorna informações nutricionais **totais** e **por porção** automaticamente calculadas com base nos ingredientes e suas quantidades.
+
+**Resposta (200 OK):**
+
+```json
+{
+  "total": {
+    "calories": 318.0,
+    "protein": 64.0,
+    "carbs": 0.0,
+    "fat": 6.0,
+    "fiber": 0.0
+  },
+  "per_serving": {
+    "calories": 79.5,
+    "protein": 16.0,
+    "carbs": 0.0,
+    "fat": 1.5,
+    "fiber": 0.0
+  },
+  "servings": 4
+}
+```
+
+### Atualizar Ingrediente da Receita
+
+```bash
+PUT /recipes/{id}/ingredients/{ingredient_id}
+Authorization: Bearer TOKEN
+Content-Type: application/json
+
+{
+  "quantity": 300,
+  "notes": "cortado em cubos"
+}
+```
+
+### Remover Ingrediente da Receita
+
+```bash
+DELETE /recipes/{id}/ingredients/{ingredient_id}
+Authorization: Bearer TOKEN
+```
+
+### Gerenciar Ingredientes (Admin)
+
+Apenas administradores podem criar, editar ou deletar ingredientes da base:
+
+```bash
+# Criar novo ingrediente
+POST /admin/ingredients
+Authorization: Bearer ADMIN_TOKEN
+Content-Type: application/json
+
+{
+  "name": "Ingrediente Novo",
+  "calories": 100,
+  "protein": 5.0,
+  "carbs": 20.0,
+  "fat": 2.0,
+  "fiber": 3.0,
+  "category": "outros"
+}
+
+# Editar ingrediente
+PUT /admin/ingredients/{id}
+Authorization: Bearer ADMIN_TOKEN
+
+# Deletar ingrediente (só se não estiver em uso)
+DELETE /admin/ingredients/{id}
+Authorization: Bearer ADMIN_TOKEN
+```
+
+### Seed de Ingredientes
+
+Para popular o banco com ingredientes da **Tabela TACO** (Tabela Brasileira de Composição de Alimentos):
+
+```bash
+# 1. Baixar a Tabela TACO em formato CSV
+# Disponível em: https://www.cfn.org.br/wp-content/uploads/2017/03/taco_4_edicao_ampliada_e_revisada.pdf
+# (Ou use a versão em CSV fornecida)
+
+# 2. Executar script de seed
+go run ./cmd/seed-ingredients ~/Downloads/alimentos.csv
+
+# Resultado: ~597 ingredientes brasileiros criados
+```
+
+**Fonte de dados:** Tabela TACO 4ª Edição - UNICAMP/NEPA  
+**Categorias:** Cereais, Vegetais, Frutas, Carnes, Peixes, Laticínios, Leguminosas, Nozes/Sementes, Óleos/Gorduras, Bebidas, Açúcares, Alimentos Preparados, e outros.
+
+Os ingredientes incluem informações nutricionais completas (calorias, proteínas, carboidratos, gorduras, fibras) por 100g de alimento.
+
 ## 🔌 Endpoints
 
 ### GET /health

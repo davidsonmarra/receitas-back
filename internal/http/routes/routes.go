@@ -64,6 +64,32 @@ func Setup() *chi.Mux {
 		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/{id}", handlers.DeleteRecipe)
 	})
 
+	// Rotas de ingredientes (públicas para leitura)
+	r.Route("/ingredients", func(r chi.Router) {
+		// GET /ingredients - listar com filtros e paginação
+		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/", handlers.ListIngredients)
+
+		// GET /ingredients/categories - listar categorias
+		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/categories", handlers.GetCategories)
+
+		// GET /ingredients/{id} - ver ingrediente
+		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/{id}", handlers.GetIngredient)
+	})
+
+	// Rotas de ingredientes nas receitas
+	r.Route("/recipes/{id}/ingredients", func(r chi.Router) {
+		// GET /recipes/{id}/ingredients - listar ingredientes da receita (público)
+		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/", handlers.ListRecipeIngredients)
+
+		// Rotas protegidas (requer auth)
+		r.With(customMiddleware.RequireAuth).Post("/", handlers.AddRecipeIngredient)
+		r.With(customMiddleware.RequireAuth).Put("/{ingredient_id}", handlers.UpdateRecipeIngredient)
+		r.With(customMiddleware.RequireAuth).Delete("/{ingredient_id}", handlers.DeleteRecipeIngredient)
+	})
+
+	// Rota de cálculo nutricional
+	r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/recipes/{id}/nutrition", handlers.GetRecipeNutrition)
+
 	// Rotas administrativas (requer admin)
 	r.Route("/admin", func(r chi.Router) {
 		// Middleware: RequireAuth + RequireAdmin (defense in depth)
@@ -82,6 +108,18 @@ func Setup() *chi.Mux {
 
 			// DELETE /admin/recipes/{id} - deletar qualquer receita
 			r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/{id}", handlers.AdminDeleteRecipe)
+		})
+
+		// Rotas de ingredientes admin
+		r.Route("/ingredients", func(r chi.Router) {
+			// POST /admin/ingredients - criar ingrediente
+			r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/", handlers.CreateIngredient)
+
+			// PUT /admin/ingredients/{id} - editar ingrediente
+			r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Put("/{id}", handlers.UpdateIngredient)
+
+			// DELETE /admin/ingredients/{id} - deletar ingrediente
+			r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/{id}", handlers.DeleteIngredient)
 		})
 	})
 
