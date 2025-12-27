@@ -21,14 +21,38 @@ func ListIngredients(w http.ResponseWriter, r *http.Request) {
 
 	query := database.DB.Model(&models.Ingredient{})
 
-	// Filtro por nome
+	// Filtro por nome e categoria com ranking de relevância
 	if search := r.URL.Query().Get("search"); search != "" {
-		query = query.Where("name ILIKE ?", "%"+search+"%")
+		// Normalizar busca: lowercase e trim
+		search = strings.TrimSpace(strings.ToLower(search))
+		searchPattern := "%" + search + "%"
+		searchStart := search + "%"
+
+		// Buscar em nome E categoria
+		query = query.Where(
+			"LOWER(name) LIKE ? OR LOWER(category) LIKE ?",
+			searchPattern, searchPattern,
+		)
+
+		// Ordenar por relevância: nome começa > nome contém > categoria contém
+		query = query.Order(database.DB.Raw(
+			"CASE "+
+				"WHEN LOWER(name) LIKE ? THEN 1 "+
+				"WHEN LOWER(name) LIKE ? THEN 2 "+
+				"WHEN LOWER(category) LIKE ? THEN 3 "+
+				"ELSE 4 END",
+			searchStart,    // nome começa com termo
+			searchPattern,  // nome contém termo
+			searchPattern,  // categoria contém termo
+		))
+	} else {
+		// Sem busca, ordenar alfabeticamente
+		query = query.Order("name ASC")
 	}
 
-	// Filtro por categoria
+	// Filtro adicional por categoria (AND com search)
 	if category := r.URL.Query().Get("category"); category != "" {
-		query = query.Where("category = ?", category)
+		query = query.Where("category = ?", strings.ToLower(category))
 	}
 
 	var total int64
@@ -42,14 +66,13 @@ func ListIngredients(w http.ResponseWriter, r *http.Request) {
 	offset := pagination.CalculateOffset(params)
 
 	if err := query.Limit(params.Limit).Offset(offset).
-		Order("name ASC").
 		Find(&ingredients).Error; err != nil {
 		log.ErrorCtx(r.Context(), "failed to list ingredients", "error", err)
 		response.Error(w, http.StatusInternalServerError, "Failed to list ingredients")
 		return
 	}
 
-	log.InfoCtx(r.Context(), "ingredients listed", "total", total, "returned", len(ingredients))
+	log.InfoCtx(r.Context(), "ingredients listed", "total", total, "returned", len(ingredients), "search", r.URL.Query().Get("search"))
 	paginatedResponse := pagination.BuildResponse(ingredients, params, total)
 	response.JSON(w, http.StatusOK, paginatedResponse)
 }

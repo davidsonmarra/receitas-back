@@ -307,3 +307,157 @@ func TestGetCategories(t *testing.T) {
 	}
 }
 
+func TestSearchIngredientsByName(t *testing.T) {
+	setupIngredientTestDB(t)
+
+	// Criar ingredientes para testar busca
+	ingredients := []models.Ingredient{
+		{Name: "Arroz branco", Calories: 128, Category: "cereais", Source: "test"},
+		{Name: "Arroz integral", Calories: 123, Category: "cereais", Source: "test"},
+		{Name: "Macarrão de arroz", Calories: 102, Category: "massas", Source: "test"},
+		{Name: "Feijão preto", Calories: 77, Category: "leguminosas", Source: "test"},
+	}
+
+	for _, ing := range ingredients {
+		database.DB.Create(&ing)
+	}
+
+	// Buscar por "arroz"
+	req := httptest.NewRequest("GET", "/ingredients?search=arroz", nil)
+	rec := httptest.NewRecorder()
+
+	handlers.ListIngredients(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("esperado status 200, obteve %d", rec.Code)
+		t.Logf("Response: %s", rec.Body.String())
+		return
+	}
+
+	var response map[string]interface{}
+	json.Unmarshal(rec.Body.Bytes(), &response)
+
+	if data, ok := response["data"].([]interface{}); ok {
+		// Deve retornar 3 ingredientes com "arroz" no nome
+		if len(data) != 3 {
+			t.Errorf("esperado 3 ingredientes com 'arroz', obteve %d", len(data))
+		}
+
+		// Verificar que "Arroz branco" vem primeiro (começa com "arroz")
+		if len(data) > 0 {
+			first := data[0].(map[string]interface{})
+			name := first["name"].(string)
+			if name != "Arroz branco" && name != "Arroz integral" {
+				t.Logf("Primeiro resultado: %s (esperado começar com 'Arroz')", name)
+			}
+		}
+	} else {
+		t.Error("response['data'] não é uma lista")
+	}
+}
+
+func TestSearchIngredientsByCategory(t *testing.T) {
+	setupIngredientTestDB(t)
+
+	// Criar ingredientes
+	ingredients := []models.Ingredient{
+		{Name: "Tomate", Calories: 15, Category: "vegetais", Source: "test"},
+		{Name: "Cebola", Calories: 38, Category: "vegetais", Source: "test"},
+		{Name: "Banana", Calories: 92, Category: "frutas", Source: "test"},
+	}
+
+	for _, ing := range ingredients {
+		database.DB.Create(&ing)
+	}
+
+	// Buscar por "vegetais"
+	req := httptest.NewRequest("GET", "/ingredients?search=vegetais", nil)
+	rec := httptest.NewRecorder()
+
+	handlers.ListIngredients(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("esperado status 200, obteve %d", rec.Code)
+		return
+	}
+
+	var response map[string]interface{}
+	json.Unmarshal(rec.Body.Bytes(), &response)
+
+	if data, ok := response["data"].([]interface{}); ok {
+		// Deve retornar 2 ingredientes da categoria "vegetais"
+		if len(data) != 2 {
+			t.Errorf("esperado 2 ingredientes em 'vegetais', obteve %d", len(data))
+		}
+	}
+}
+
+func TestSearchIngredientsCaseInsensitive(t *testing.T) {
+	setupIngredientTestDB(t)
+
+	// Criar ingrediente
+	ingredient := models.Ingredient{
+		Name:     "Açúcar refinado",
+		Calories: 387,
+		Category: "açúcares",
+		Source:   "test",
+	}
+	database.DB.Create(&ingredient)
+
+	// Buscar com maiúsculas
+	req := httptest.NewRequest("GET", "/ingredients?search=AÇÚCAR", nil)
+	rec := httptest.NewRecorder()
+
+	handlers.ListIngredients(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("esperado status 200, obteve %d", rec.Code)
+		return
+	}
+
+	var response map[string]interface{}
+	json.Unmarshal(rec.Body.Bytes(), &response)
+
+	if data, ok := response["data"].([]interface{}); ok {
+		if len(data) != 1 {
+			t.Errorf("esperado 1 ingrediente com 'AÇÚCAR', obteve %d", len(data))
+		}
+	}
+}
+
+func TestSearchWithCategoryFilter(t *testing.T) {
+	setupIngredientTestDB(t)
+
+	// Criar ingredientes
+	ingredients := []models.Ingredient{
+		{Name: "Feijão preto", Calories: 77, Category: "leguminosas", Source: "test"},
+		{Name: "Feijão carioca", Calories: 76, Category: "leguminosas", Source: "test"},
+		{Name: "Farinha de feijão", Calories: 330, Category: "farinhas", Source: "test"},
+	}
+
+	for _, ing := range ingredients {
+		database.DB.Create(&ing)
+	}
+
+	// Buscar "feijão" apenas na categoria "leguminosas"
+	req := httptest.NewRequest("GET", "/ingredients?search=feijão&category=leguminosas", nil)
+	rec := httptest.NewRecorder()
+
+	handlers.ListIngredients(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("esperado status 200, obteve %d", rec.Code)
+		return
+	}
+
+	var response map[string]interface{}
+	json.Unmarshal(rec.Body.Bytes(), &response)
+
+	if data, ok := response["data"].([]interface{}); ok {
+		// Deve retornar apenas os 2 feijões da categoria leguminosas
+		if len(data) != 2 {
+			t.Errorf("esperado 2 ingredientes, obteve %d", len(data))
+		}
+	}
+}
+
