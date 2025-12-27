@@ -1,14 +1,14 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2025-12-26T18:00:00.000Z",
+  "__export_date": "2025-12-26T20:00:00.000Z",
   "__export_source": "insomnia.desktop.app:v2023.5.8",
   "resources": [
     {
       "_id": "wrk_receitas_app",
       "_type": "workspace",
       "name": "Receitas API",
-      "description": "API para gerenciamento de receitas",
+      "description": "API para gerenciamento de receitas com autenticação JWT",
       "scope": "collection"
     },
     {
@@ -16,7 +16,12 @@
       "_type": "environment",
       "name": "Base Environment",
       "data": {
-        "base_url": "https://receitas-back-production.up.railway.app"
+        "auth_token": "",
+        "admin_token": "",
+        "user_email": "user@example.com",
+        "user_password": "senha123",
+        "admin_email": "admin@receitas.com",
+        "admin_password": "admin123"
       },
       "dataPropertyOrder": null,
       "color": null,
@@ -25,13 +30,164 @@
       "parentId": "wrk_receitas_app"
     },
     {
-      "_id": "fld_health",
+      "_id": "env_local",
+      "_type": "environment",
+      "name": "Local",
+      "data": {
+        "base_url": "http://localhost:8080"
+      },
+      "dataPropertyOrder": null,
+      "color": "#28a745",
+      "isPrivate": false,
+      "metaSortKey": 2,
+      "parentId": "env_base"
+    },
+    {
+      "_id": "env_production",
+      "_type": "environment",
+      "name": "Production",
+      "data": {
+        "base_url": "https://receitas-back-production.up.railway.app"
+      },
+      "dataPropertyOrder": null,
+      "color": "#dc3545",
+      "isPrivate": false,
+      "metaSortKey": 3,
+      "parentId": "env_base"
+    },
+    {
+      "_id": "fld_setup_auth",
       "_type": "request_group",
-      "name": "Health & Test",
-      "description": "Endpoints de saúde e teste",
+      "name": "0. Setup & Auth",
+      "description": "Configure tokens automaticamente - Execute Login User ou Login Admin primeiro",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": 1,
+      "parentId": "wrk_receitas_app"
+    },
+    {
+      "_id": "req_login_user",
+      "_type": "request",
+      "name": "Login User (auto-save token)",
+      "url": "{{ _.base_url }}/users/login",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"email\": \"{{ _.user_email }}\",\n\t\"password\": \"{{ _.user_password }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Login de usuário comum. Token é salvo automaticamente em 'auth_token'.",
+      "parentId": "fld_setup_auth",
+      "afterResponseScript": "const response = await insomnia.response.json();\nif (response && response.token) {\n  await insomnia.environment.set('auth_token', response.token);\n  console.log('✅ Token de usuário salvo em auth_token');\n} else {\n  console.log('❌ Erro: Token não encontrado na resposta');\n}"
+    },
+    {
+      "_id": "req_login_admin",
+      "_type": "request",
+      "name": "Login Admin (auto-save token)",
+      "url": "{{ _.base_url }}/users/login",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"email\": \"{{ _.admin_email }}\",\n\t\"password\": \"{{ _.admin_password }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Login de administrador. Token é salvo automaticamente em 'admin_token'.",
+      "parentId": "fld_setup_auth",
+      "afterResponseScript": "const response = await insomnia.response.json();\nif (response && response.token) {\n  await insomnia.environment.set('admin_token', response.token);\n  console.log('✅ Token de admin salvo em admin_token');\n} else {\n  console.log('❌ Erro: Token não encontrado na resposta');\n}"
+    },
+    {
+      "_id": "req_register",
+      "_type": "request",
+      "name": "Register User",
+      "url": "{{ _.base_url }}/users/register",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"name\": \"João Silva\",\n\t\"email\": \"joao@example.com\",\n\t\"password\": \"senha123\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Registrar novo usuário. Retorna token JWT automaticamente.",
+      "parentId": "fld_setup_auth"
+    },
+    {
+      "_id": "req_logout",
+      "_type": "request",
+      "name": "Logout",
+      "url": "{{ _.base_url }}/users/logout",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Logout (adiciona token à blacklist)",
+      "parentId": "fld_setup_auth"
+    },
+    {
+      "_id": "fld_health",
+      "_type": "request_group",
+      "name": "1. Health & Test",
+      "description": "Endpoints de saúde e teste",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2,
       "parentId": "wrk_receitas_app"
     },
     {
@@ -77,153 +233,26 @@
       "parentId": "fld_health"
     },
     {
-      "_id": "fld_auth",
+      "_id": "fld_recipes_public",
       "_type": "request_group",
-      "name": "Authentication",
-      "description": "Endpoints de autenticação JWT",
-      "environment": {},
-      "environmentPropertyOrder": null,
-      "metaSortKey": 2,
-      "parentId": "wrk_receitas_app"
-    },
-    {
-      "_id": "req_register",
-      "_type": "request",
-      "name": "Register User",
-      "url": "{{ _.base_url }}/users/register",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n\t\"name\": \"João Silva\",\n\t\"email\": \"joao@example.com\",\n\t\"password\": \"senha123\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": 1,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "description": "Cadastra um novo usuário e retorna token JWT. Validações: nome (min 3 chars), email válido e único, senha (min 6 chars).",
-      "parentId": "fld_auth"
-    },
-    {
-      "_id": "req_login",
-      "_type": "request",
-      "name": "Login",
-      "url": "{{ _.base_url }}/users/login",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n\t\"email\": \"joao@example.com\",\n\t\"password\": \"senha123\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": 2,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "description": "Autentica um usuário e retorna token JWT com validade de 24 horas.",
-      "parentId": "fld_auth"
-    },
-    {
-      "_id": "req_logout",
-      "_type": "request",
-      "name": "Logout",
-      "url": "{{ _.base_url }}/users/logout",
-      "method": "POST",
-      "body": {},
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Authorization",
-          "value": "Bearer YOUR_TOKEN_HERE"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": 3,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "description": "Invalida o token atual adicionando-o à blacklist. Requer token JWT no header Authorization.",
-      "parentId": "fld_auth"
-    },
-    {
-      "_id": "fld_recipes",
-      "_type": "request_group",
-      "name": "Recipes",
-      "description": "CRUD de receitas",
+      "name": "2. Recipes (Public)",
+      "description": "Endpoints públicos de receitas - Não requerem autenticação",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": 3,
       "parentId": "wrk_receitas_app"
-    },
-    {
-      "_id": "req_create_recipe",
-      "_type": "request",
-      "name": "Create Recipe",
-      "url": "{{ _.base_url }}/recipes",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n\t\"title\": \"Bolo de Chocolate\",\n\t\"description\": \"Um delicioso bolo de chocolate macio e fofinho\",\n\t\"prep_time\": 60,\n\t\"servings\": 8,\n\t\"difficulty\": \"média\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Authorization",
-          "value": "Bearer YOUR_TOKEN_HERE"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": 1,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "description": "Cria uma nova receita. REQUER AUTENTICAÇÃO: Adicione o token JWT no header Authorization. A receita será automaticamente atribuída ao usuário autenticado (user_id).",
-      "parentId": "fld_recipes"
     },
     {
       "_id": "req_list_recipes",
       "_type": "request",
-      "name": "List Recipes (Paginated - Default)",
+      "name": "List Recipes",
       "url": "{{ _.base_url }}/recipes",
       "method": "GET",
       "body": {},
       "parameters": [],
       "headers": [],
       "authentication": {},
-      "metaSortKey": 2,
+      "metaSortKey": 1,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -231,44 +260,14 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Lista receitas com paginação padrão (page=1, limit=20)",
-      "parentId": "fld_recipes"
+      "description": "Listar todas as receitas com paginação",
+      "parentId": "fld_recipes_public"
     },
     {
-      "_id": "req_list_recipes_page2",
+      "_id": "req_list_recipes_paginated",
       "_type": "request",
-      "name": "List Recipes (Page 2)",
-      "url": "{{ _.base_url }}/recipes?page=2&limit=10",
-      "method": "GET",
-      "body": {},
-      "parameters": [
-        {
-          "name": "page",
-          "value": "2"
-        },
-        {
-          "name": "limit",
-          "value": "10"
-        }
-      ],
-      "headers": [],
-      "authentication": {},
-      "metaSortKey": 2.5,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "description": "Lista receitas da página 2 com 10 itens por página",
-      "parentId": "fld_recipes"
-    },
-    {
-      "_id": "req_list_recipes_custom",
-      "_type": "request",
-      "name": "List Recipes (Custom Limit)",
-      "url": "{{ _.base_url }}/recipes?page=1&limit=50",
+      "name": "List Recipes (Paginated)",
+      "url": "{{ _.base_url }}/recipes",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -278,12 +277,12 @@
         },
         {
           "name": "limit",
-          "value": "50"
+          "value": "10"
         }
       ],
       "headers": [],
       "authentication": {},
-      "metaSortKey": 2.6,
+      "metaSortKey": 2,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -291,8 +290,45 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Lista receitas com limite customizado de 50 itens",
-      "parentId": "fld_recipes"
+      "description": "Listar receitas com paginação customizada",
+      "parentId": "fld_recipes_public"
+    },
+    {
+      "_id": "req_list_recipes_filtered",
+      "_type": "request",
+      "name": "List Recipes (Filtered)",
+      "url": "{{ _.base_url }}/recipes",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "difficulty",
+          "value": "fácil",
+          "disabled": true
+        },
+        {
+          "name": "min_servings",
+          "value": "2",
+          "disabled": true
+        },
+        {
+          "name": "max_prep_time",
+          "value": "30",
+          "disabled": true
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Listar receitas com filtros (ative os params que deseja usar)",
+      "parentId": "fld_recipes_public"
     },
     {
       "_id": "req_get_recipe",
@@ -304,7 +340,7 @@
       "parameters": [],
       "headers": [],
       "authentication": {},
-      "metaSortKey": 3,
+      "metaSortKey": 4,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -312,18 +348,28 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Busca uma receita específica pelo ID",
-      "parentId": "fld_recipes"
+      "description": "Buscar receita específica por ID",
+      "parentId": "fld_recipes_public"
     },
     {
-      "_id": "req_update_recipe",
+      "_id": "fld_recipes_auth",
+      "_type": "request_group",
+      "name": "3. Recipes (Authenticated)",
+      "description": "CRUD de receitas - Requer autenticação (Execute Login User primeiro)",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 4,
+      "parentId": "wrk_receitas_app"
+    },
+    {
+      "_id": "req_create_recipe",
       "_type": "request",
-      "name": "Update Recipe",
-      "url": "{{ _.base_url }}/recipes/1",
-      "method": "PUT",
+      "name": "Create Recipe",
+      "url": "{{ _.base_url }}/recipes",
+      "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n\t\"title\": \"Bolo de Chocolate Premium\",\n\t\"description\": \"Um delicioso bolo de chocolate belga macio e fofinho\",\n\t\"prep_time\": 75,\n\t\"servings\": 10,\n\t\"difficulty\": \"difícil\"\n}"
+        "text": "{\n\t\"title\": \"Bolo de Chocolate\",\n\t\"description\": \"Receita deliciosa de bolo de chocolate\",\n\t\"prep_time\": 45,\n\t\"servings\": 8,\n\t\"difficulty\": \"média\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -333,11 +379,11 @@
         },
         {
           "name": "Authorization",
-          "value": "Bearer YOUR_TOKEN_HERE"
+          "value": "Bearer {{ _.auth_token }}"
         }
       ],
       "authentication": {},
-      "metaSortKey": 4,
+      "metaSortKey": 1,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -345,8 +391,41 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Atualiza uma receita existente. REQUER AUTENTICAÇÃO: Apenas o criador da receita pode editá-la. Retorna 403 Forbidden se tentar editar receita de outro usuário.",
-      "parentId": "fld_recipes"
+      "description": "Criar nova receita (requer auth_token)",
+      "parentId": "fld_recipes_auth"
+    },
+    {
+      "_id": "req_update_recipe",
+      "_type": "request",
+      "name": "Update Recipe",
+      "url": "{{ _.base_url }}/recipes/1",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"title\": \"Bolo de Chocolate Premium\",\n\t\"prep_time\": 50\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Atualizar receita (apenas o criador ou admin)",
+      "parentId": "fld_recipes_auth"
     },
     {
       "_id": "req_delete_recipe",
@@ -359,11 +438,11 @@
       "headers": [
         {
           "name": "Authorization",
-          "value": "Bearer YOUR_TOKEN_HERE"
+          "value": "Bearer {{ _.auth_token }}"
         }
       ],
       "authentication": {},
-      "metaSortKey": 5,
+      "metaSortKey": 3,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -371,23 +450,23 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Deleta uma receita (soft delete). REQUER AUTENTICAÇÃO: Apenas o criador da receita pode deletá-la. Retorna 403 Forbidden se tentar deletar receita de outro usuário.",
-      "parentId": "fld_recipes"
+      "description": "Deletar receita (apenas o criador ou admin)",
+      "parentId": "fld_recipes_auth"
     },
     {
-      "_id": "fld_admin",
+      "_id": "fld_admin_recipes",
       "_type": "request_group",
-      "name": "Admin",
-      "description": "Endpoints administrativos - Requerem role = admin",
+      "name": "4. Admin - Recipes",
+      "description": "Administração de receitas - Requer role admin (Execute Login Admin primeiro)",
       "environment": {},
       "environmentPropertyOrder": null,
-      "metaSortKey": 4,
+      "metaSortKey": 5,
       "parentId": "wrk_receitas_app"
     },
     {
       "_id": "req_admin_list_recipes",
       "_type": "request",
-      "name": "Admin - List All Recipes",
+      "name": "Admin List All Recipes",
       "url": "{{ _.base_url }}/admin/recipes",
       "method": "GET",
       "body": {},
@@ -395,7 +474,7 @@
       "headers": [
         {
           "name": "Authorization",
-          "value": "Bearer YOUR_ADMIN_TOKEN_HERE"
+          "value": "Bearer {{ _.admin_token }}"
         }
       ],
       "authentication": {},
@@ -407,18 +486,18 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Lista todas as receitas com informações de usuário. REQUER ADMIN: Apenas admins podem acessar. Retorna 403 para usuários normais.",
-      "parentId": "fld_admin"
+      "description": "Listar todas as receitas com informações de usuário (admin only)",
+      "parentId": "fld_admin_recipes"
     },
     {
       "_id": "req_admin_create_general",
       "_type": "request",
-      "name": "Admin - Create General Recipe",
+      "name": "Admin Create General Recipe",
       "url": "{{ _.base_url }}/admin/recipes/general",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n\t\"title\": \"Receita Geral do Sistema\",\n\t\"description\": \"Receita criada pelo sistema, sem dono específico\",\n\t\"prep_time\": 30,\n\t\"servings\": 4,\n\t\"difficulty\": \"média\"\n}"
+        "text": "{\n\t\"title\": \"Receita Geral do Sistema\",\n\t\"description\": \"Receita disponível para todos os usuários\",\n\t\"prep_time\": 30,\n\t\"servings\": 4,\n\t\"difficulty\": \"fácil\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -428,7 +507,7 @@
         },
         {
           "name": "Authorization",
-          "value": "Bearer YOUR_ADMIN_TOKEN_HERE"
+          "value": "Bearer {{ _.admin_token }}"
         }
       ],
       "authentication": {},
@@ -440,18 +519,18 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Cria receita geral (user_id = null). REQUER ADMIN: Apenas admins podem criar receitas gerais do sistema.",
-      "parentId": "fld_admin"
+      "description": "Criar receita geral (sem user_id) - admin only",
+      "parentId": "fld_admin_recipes"
     },
     {
       "_id": "req_admin_update_recipe",
       "_type": "request",
-      "name": "Admin - Update Any Recipe",
+      "name": "Admin Update Any Recipe",
       "url": "{{ _.base_url }}/admin/recipes/1",
       "method": "PUT",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n\t\"title\": \"Editada por Admin\",\n\t\"description\": \"Esta receita foi modificada por um administrador\"\n}"
+        "text": "{\n\t\"title\": \"Receita Editada por Admin\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -461,7 +540,7 @@
         },
         {
           "name": "Authorization",
-          "value": "Bearer YOUR_ADMIN_TOKEN_HERE"
+          "value": "Bearer {{ _.admin_token }}"
         }
       ],
       "authentication": {},
@@ -473,13 +552,13 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Edita qualquer receita, mesmo de outro usuário ou receita geral. REQUER ADMIN: Admin override de ownership.",
-      "parentId": "fld_admin"
+      "description": "Atualizar qualquer receita (admin only)",
+      "parentId": "fld_admin_recipes"
     },
     {
       "_id": "req_admin_delete_recipe",
       "_type": "request",
-      "name": "Admin - Delete Any Recipe",
+      "name": "Admin Delete Any Recipe",
       "url": "{{ _.base_url }}/admin/recipes/1",
       "method": "DELETE",
       "body": {},
@@ -487,7 +566,7 @@
       "headers": [
         {
           "name": "Authorization",
-          "value": "Bearer YOUR_ADMIN_TOKEN_HERE"
+          "value": "Bearer {{ _.admin_token }}"
         }
       ],
       "authentication": {},
@@ -499,24 +578,24 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Deleta qualquer receita (soft delete). REQUER ADMIN: Admin pode deletar receitas de qualquer usuário ou receitas gerais.",
-      "parentId": "fld_admin"
+      "description": "Deletar qualquer receita (admin only)",
+      "parentId": "fld_admin_recipes"
     },
     {
-      "_id": "fld_ingredients",
+      "_id": "fld_ingredients_public",
       "_type": "request_group",
-      "name": "Ingredients",
-      "description": "Endpoints de ingredientes e informações nutricionais",
+      "name": "5. Ingredients (Public)",
+      "description": "Busca e listagem de ingredientes - Endpoints públicos",
       "environment": {},
       "environmentPropertyOrder": null,
-      "metaSortKey": 5,
+      "metaSortKey": 6,
       "parentId": "wrk_receitas_app"
     },
     {
       "_id": "req_list_ingredients",
       "_type": "request",
       "name": "List Ingredients",
-      "url": "{{ _.base_url }}/ingredients?page=1&limit=20",
+      "url": "{{ _.base_url }}/ingredients",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -530,17 +609,22 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Lista todos ingredientes com paginação e filtros opcionais (search, category).",
-      "parentId": "fld_ingredients"
+      "description": "Listar todos os ingredientes com paginação",
+      "parentId": "fld_ingredients_public"
     },
     {
       "_id": "req_search_ingredients",
       "_type": "request",
       "name": "Search Ingredients",
-      "url": "{{ _.base_url }}/ingredients?search=tomate&category=vegetais",
+      "url": "{{ _.base_url }}/ingredients",
       "method": "GET",
       "body": {},
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "search",
+          "value": "arroz"
+        }
+      ],
       "headers": [],
       "authentication": {},
       "metaSortKey": 2,
@@ -551,17 +635,26 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Busca ingredientes por nome e categoria.",
-      "parentId": "fld_ingredients"
+      "description": "Buscar ingredientes por nome ou categoria (com ranking de relevância)",
+      "parentId": "fld_ingredients_public"
     },
     {
-      "_id": "req_get_ingredient",
+      "_id": "req_search_ingredients_category",
       "_type": "request",
-      "name": "Get Ingredient",
-      "url": "{{ _.base_url }}/ingredients/1",
+      "name": "Search with Category Filter",
+      "url": "{{ _.base_url }}/ingredients",
       "method": "GET",
       "body": {},
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "search",
+          "value": "cozido"
+        },
+        {
+          "name": "category",
+          "value": "vegetais"
+        }
+      ],
       "headers": [],
       "authentication": {},
       "metaSortKey": 3,
@@ -572,8 +665,29 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Busca um ingrediente por ID.",
-      "parentId": "fld_ingredients"
+      "description": "Buscar com filtro de categoria (AND lógico)",
+      "parentId": "fld_ingredients_public"
+    },
+    {
+      "_id": "req_get_ingredient",
+      "_type": "request",
+      "name": "Get Ingredient by ID",
+      "url": "{{ _.base_url }}/ingredients/1",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Buscar ingrediente específico por ID",
+      "parentId": "fld_ingredients_public"
     },
     {
       "_id": "req_get_categories",
@@ -585,39 +699,6 @@
       "parameters": [],
       "headers": [],
       "authentication": {},
-      "metaSortKey": 4,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "description": "Lista todas as categorias disponíveis de ingredientes.",
-      "parentId": "fld_ingredients"
-    },
-    {
-      "_id": "req_add_recipe_ingredient",
-      "_type": "request",
-      "name": "Add Ingredient to Recipe",
-      "url": "{{ _.base_url }}/recipes/1/ingredients",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n\t\"ingredient_id\": 1,\n\t\"quantity\": 200,\n\t\"unit\": \"g\",\n\t\"notes\": \"picado\",\n\t\"order\": 1\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Authorization",
-          "value": "Bearer YOUR_TOKEN_HERE"
-        }
-      ],
-      "authentication": {},
       "metaSortKey": 5,
       "isPrivate": false,
       "settingStoreCookies": true,
@@ -626,8 +707,18 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Adiciona ingrediente a uma receita. Requer autenticação e ownership da receita.",
-      "parentId": "fld_ingredients"
+      "description": "Listar todas as categorias disponíveis",
+      "parentId": "fld_ingredients_public"
+    },
+    {
+      "_id": "fld_recipe_ingredients",
+      "_type": "request_group",
+      "name": "6. Recipe Ingredients",
+      "description": "Gerenciar ingredientes de receitas e cálculo nutricional",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 7,
+      "parentId": "wrk_receitas_app"
     },
     {
       "_id": "req_list_recipe_ingredients",
@@ -639,7 +730,7 @@
       "parameters": [],
       "headers": [],
       "authentication": {},
-      "metaSortKey": 6,
+      "metaSortKey": 1,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -647,39 +738,18 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Lista todos ingredientes de uma receita específica (público).",
-      "parentId": "fld_ingredients"
+      "description": "Listar ingredientes de uma receita (público)",
+      "parentId": "fld_recipe_ingredients"
     },
     {
-      "_id": "req_get_recipe_nutrition",
+      "_id": "req_add_recipe_ingredient",
       "_type": "request",
-      "name": "Get Recipe Nutrition",
-      "url": "{{ _.base_url }}/recipes/1/nutrition",
-      "method": "GET",
-      "body": {},
-      "parameters": [],
-      "headers": [],
-      "authentication": {},
-      "metaSortKey": 7,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "description": "Calcula informações nutricionais totais e por porção da receita.",
-      "parentId": "fld_ingredients"
-    },
-    {
-      "_id": "req_update_recipe_ingredient",
-      "_type": "request",
-      "name": "Update Recipe Ingredient",
-      "url": "{{ _.base_url }}/recipes/1/ingredients/1",
-      "method": "PUT",
+      "name": "Add Ingredient to Recipe",
+      "url": "{{ _.base_url }}/recipes/1/ingredients",
+      "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n\t\"quantity\": 300,\n\t\"notes\": \"cortado em cubos\"\n}"
+        "text": "{\n\t\"ingredient_id\": 1,\n\t\"quantity\": 200,\n\t\"unit\": \"g\",\n\t\"notes\": \"Frango sem pele\",\n\t\"order\": 1\n}"
       },
       "parameters": [],
       "headers": [
@@ -689,11 +759,11 @@
         },
         {
           "name": "Authorization",
-          "value": "Bearer YOUR_TOKEN_HERE"
+          "value": "Bearer {{ _.auth_token }}"
         }
       ],
       "authentication": {},
-      "metaSortKey": 8,
+      "metaSortKey": 2,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -701,8 +771,41 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Atualiza quantidade/unidade de ingrediente na receita. Requer autenticação.",
-      "parentId": "fld_ingredients"
+      "description": "Adicionar ingrediente a uma receita (requer ownership)",
+      "parentId": "fld_recipe_ingredients"
+    },
+    {
+      "_id": "req_update_recipe_ingredient",
+      "_type": "request",
+      "name": "Update Recipe Ingredient",
+      "url": "{{ _.base_url }}/recipes/1/ingredients/1",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"quantity\": 250,\n\t\"notes\": \"Quantidade ajustada\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Atualizar quantidade/notas de ingrediente (requer ownership)",
+      "parentId": "fld_recipe_ingredients"
     },
     {
       "_id": "req_delete_recipe_ingredient",
@@ -715,11 +818,11 @@
       "headers": [
         {
           "name": "Authorization",
-          "value": "Bearer YOUR_TOKEN_HERE"
+          "value": "Bearer {{ _.auth_token }}"
         }
       ],
       "authentication": {},
-      "metaSortKey": 9,
+      "metaSortKey": 4,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -727,18 +830,49 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Remove ingrediente da receita. Requer autenticação.",
-      "parentId": "fld_ingredients"
+      "description": "Remover ingrediente de uma receita (requer ownership)",
+      "parentId": "fld_recipe_ingredients"
+    },
+    {
+      "_id": "req_get_recipe_nutrition",
+      "_type": "request",
+      "name": "Get Recipe Nutrition",
+      "url": "{{ _.base_url }}/recipes/1/nutrition",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Calcular informação nutricional total e por porção (público)",
+      "parentId": "fld_recipe_ingredients"
+    },
+    {
+      "_id": "fld_admin_ingredients",
+      "_type": "request_group",
+      "name": "7. Admin - Ingredients",
+      "description": "CRUD de ingredientes - Requer role admin (Execute Login Admin primeiro)",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 8,
+      "parentId": "wrk_receitas_app"
     },
     {
       "_id": "req_admin_create_ingredient",
       "_type": "request",
-      "name": "Admin - Create Ingredient",
+      "name": "Create Ingredient",
       "url": "{{ _.base_url }}/admin/ingredients",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n\t\"name\": \"Ingrediente Novo\",\n\t\"calories\": 100,\n\t\"protein\": 5.0,\n\t\"carbs\": 20.0,\n\t\"fat\": 2.0,\n\t\"fiber\": 3.0,\n\t\"category\": \"outros\"\n}"
+        "text": "{\n\t\"name\": \"Quinoa\",\n\t\"calories\": 120,\n\t\"protein\": 4.4,\n\t\"carbs\": 21.3,\n\t\"fat\": 1.9,\n\t\"fiber\": 2.8,\n\t\"category\": \"cereais\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -748,11 +882,11 @@
         },
         {
           "name": "Authorization",
-          "value": "Bearer YOUR_ADMIN_TOKEN_HERE"
+          "value": "Bearer {{ _.admin_token }}"
         }
       ],
       "authentication": {},
-      "metaSortKey": 10,
+      "metaSortKey": 1,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -760,24 +894,83 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Cria novo ingrediente na base. REQUER ADMIN.",
-      "parentId": "fld_ingredients"
+      "description": "Criar novo ingrediente (admin only)",
+      "parentId": "fld_admin_ingredients"
+    },
+    {
+      "_id": "req_admin_update_ingredient",
+      "_type": "request",
+      "name": "Update Ingredient",
+      "url": "{{ _.base_url }}/admin/ingredients/1",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"calories\": 125,\n\t\"protein\": 4.5\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.admin_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Atualizar ingrediente existente (admin only)",
+      "parentId": "fld_admin_ingredients"
+    },
+    {
+      "_id": "req_admin_delete_ingredient",
+      "_type": "request",
+      "name": "Delete Ingredient",
+      "url": "{{ _.base_url }}/admin/ingredients/1",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.admin_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Deletar ingrediente (admin only, não pode estar em uso)",
+      "parentId": "fld_admin_ingredients"
     },
     {
       "_id": "fld_rate_limit",
       "_type": "request_group",
-      "name": "Rate Limit Tests",
+      "name": "8. Rate Limit Tests",
       "description": "Testes de rate limiting - Execute múltiplas vezes para testar limites",
       "environment": {},
       "environmentPropertyOrder": null,
-      "metaSortKey": 6,
+      "metaSortKey": 9,
       "parentId": "wrk_receitas_app"
     },
     {
       "_id": "req_rate_limit_global",
       "_type": "request",
-      "name": "Test Global Rate Limit (100/min)",
-      "url": "{{ _.base_url }}/test",
+      "name": "Test Global Rate Limit",
+      "url": "{{ _.base_url }}/health",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -791,13 +984,13 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Execute este request 101 vezes rapidamente para testar o limite global de 100 req/min.\n\nHeaders esperados:\n- X-RateLimit-Limit: 100\n- X-RateLimit-Remaining: (decresce a cada request)\n- X-RateLimit-Reset: (timestamp de reset)\n\nApós 100 requests, deve retornar 429 com:\n- Retry-After: (segundos até poder tentar novamente)",
+      "description": "Execute múltiplas vezes para testar rate limit global (100 req/min)",
       "parentId": "fld_rate_limit"
     },
     {
       "_id": "req_rate_limit_read",
       "_type": "request",
-      "name": "Test Read Rate Limit (60/min)",
+      "name": "Test Read Rate Limit",
       "url": "{{ _.base_url }}/recipes",
       "method": "GET",
       "body": {},
@@ -812,18 +1005,18 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Execute este request 61 vezes rapidamente para testar o limite de leitura de 60 req/min.\n\nHeaders esperados:\n- X-RateLimit-Limit: 60\n- X-RateLimit-Remaining: (decresce a cada request)\n- X-RateLimit-Reset: (timestamp de reset)\n\nApós 60 requests, deve retornar 429 com:\n{\n  \"error\": {\n    \"title\": \"Ops, muitas requisições!\",\n    \"message\": \"Você excedeu o limite de requisições. Tente novamente em alguns segundos.\"\n  }\n}",
+      "description": "Execute múltiplas vezes para testar rate limit de leitura (60 req/min)",
       "parentId": "fld_rate_limit"
     },
     {
       "_id": "req_rate_limit_write",
       "_type": "request",
-      "name": "Test Write Rate Limit (20/min)",
-      "url": "{{ _.base_url }}/recipes",
+      "name": "Test Write Rate Limit",
+      "url": "{{ _.base_url }}/users/register",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n\t\"title\": \"Teste Rate Limit\",\n\t\"description\": \"Receita para testar rate limiting\",\n\t\"prep_time\": 30,\n\t\"servings\": 4,\n\t\"difficulty\": \"fácil\"\n}"
+        "text": "{\n\t\"name\": \"Teste Rate Limit\",\n\t\"email\": \"teste{{ Math.floor(Math.random() * 100000) }}@example.com\",\n\t\"password\": \"senha123\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -841,28 +1034,7 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Execute este request 21 vezes rapidamente para testar o limite de escrita de 20 req/min.\n\nHeaders esperados:\n- X-RateLimit-Limit: 20\n- X-RateLimit-Remaining: (decresce a cada request)\n- X-RateLimit-Reset: (timestamp de reset)\n\nApós 20 requests, deve retornar 429.\n\nNota: Endpoints de escrita (POST, PUT, DELETE) têm limite mais restritivo para proteger contra abuso.",
-      "parentId": "fld_rate_limit"
-    },
-    {
-      "_id": "req_rate_limit_429_example",
-      "_type": "request",
-      "name": "Example 429 Response",
-      "url": "{{ _.base_url }}/recipes",
-      "method": "GET",
-      "body": {},
-      "parameters": [],
-      "headers": [],
-      "authentication": {},
-      "metaSortKey": 4,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "description": "Este request mostra um exemplo de resposta 429 (Too Many Requests).\n\nPara ver a resposta real:\n1. Execute GET /recipes 61 vezes rapidamente\n2. A 61ª requisição retornará 429\n\nResposta esperada:\n\nStatus: 429 Too Many Requests\n\nHeaders:\nX-RateLimit-Limit: 60\nX-RateLimit-Remaining: 0\nX-RateLimit-Reset: 1735215720\nRetry-After: 42\nContent-Type: application/json\n\nBody:\n{\n  \"error\": {\n    \"title\": \"Ops, muitas requisições!\",\n    \"message\": \"Você excedeu o limite de requisições. Tente novamente em alguns segundos.\"\n  }\n}",
+      "description": "Execute múltiplas vezes para testar rate limit de escrita (20 req/min)",
       "parentId": "fld_rate_limit"
     }
   ]

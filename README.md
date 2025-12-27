@@ -208,6 +208,53 @@ go test -v ./...
 go test ./test
 ```
 
+## 📮 Insomnia Collection
+
+A API inclui uma **collection completa do Insomnia** para facilitar testes e desenvolvimento.
+
+### 🚀 Features
+
+✅ **Múltiplos Environments** - Troque entre Local e Production com 1 clique  
+✅ **Tokens Automáticos** - Login salva token automaticamente (sem copiar/colar)  
+✅ **Variáveis Reutilizáveis** - Configure credenciais uma vez  
+✅ **Organização por Funcionalidade** - 8 folders bem estruturados  
+✅ **Scripts Post-Response** - Captura tokens automaticamente  
+
+### 📥 Como Usar
+
+1. **Importar**: Abra Insomnia → Import → `insomnia-collection.json`
+2. **Selecionar Environment**: Local ou Production
+3. **Login**: Execute "Login User" ou "Login Admin" (tokens salvos automaticamente)
+4. **Testar**: Todas as requests autenticadas usarão os tokens salvos
+
+### 📚 Documentação Completa
+
+Veja o guia detalhado: **[INSOMNIA_GUIDE.md](INSOMNIA_GUIDE.md)**
+
+### 📁 Estrutura
+
+```
+📁 Receitas API
+  📁 0. Setup & Auth         → Configure tokens primeiro
+  📁 1. Health & Test        → Endpoints de verificação
+  📁 2. Recipes (Public)     → Listar/buscar receitas
+  📁 3. Recipes (Auth)       → CRUD de receitas
+  📁 4. Admin - Recipes      → Gestão admin de receitas
+  📁 5. Ingredients (Public) → Buscar ingredientes
+  📁 6. Recipe Ingredients   → Gerenciar ingredientes/nutrição
+  📁 7. Admin - Ingredients  → CRUD de ingredientes
+  📁 8. Rate Limit Tests     → Testar limites
+```
+
+### 🔑 Workflow Rápido
+
+```bash
+# 1. Selecionar environment (Local ou Production)
+# 2. Executar Login User (token salvo automaticamente)
+# 3. Testar endpoints autenticados
+# 4. Executar Login Admin para endpoints admin
+```
+
 ## 🛠 Comandos Cursor
 
 Este projeto inclui comandos Cursor para automatizar tarefas comuns:
