@@ -82,7 +82,7 @@ func CalculateOffset(params Params) int {
 // BuildMetadata constrói os metadados de paginação
 func BuildMetadata(params Params, total int64) Metadata {
 	totalPages := int(math.Ceil(float64(total) / float64(params.Limit)))
-	
+
 	// Evitar divisão por zero
 	if params.Limit == 0 {
 		totalPages = 0
@@ -105,4 +105,3 @@ func BuildResponse(data interface{}, params Params, total int64) Response {
 		Pagination: BuildMetadata(params, total),
 	}
 }
-

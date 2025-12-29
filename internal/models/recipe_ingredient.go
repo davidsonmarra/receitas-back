@@ -22,4 +22,3 @@ type RecipeIngredient struct {
 func (RecipeIngredient) TableName() string {
 	return "recipe_ingredients"
 }
-

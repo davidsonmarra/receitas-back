@@ -24,4 +24,3 @@ func getUserRole(userID uint) string {
 	}
 	return user.Role
 }
-

@@ -16,6 +16,7 @@ Este projeto estabelece a fundação para um serviço backend escrito em Go. A F
 - **Validator**: [go-playground/validator](https://github.com/go-playground/validator) v10 - Validação de structs
 - **Logger**: [uber-go/zap](https://github.com/uber-go/zap) - Alta performance
 - **UUID**: [google/uuid](https://github.com/google/uuid) - Geração de Request IDs
+- **Storage**: [Cloudinary](https://cloudinary.com/) - Armazenamento e CDN de imagens
 - **Testes**: testing + httptest
 
 ## 📁 Estrutura do Projeto
@@ -104,6 +105,9 @@ export JWT_SECRET="sua-chave-secreta-muito-longa-e-aleatoria"
 
 # Obrigatório: String de conexão PostgreSQL
 export DATABASE_URL="postgres://usuario:senha@localhost:5432/receitas_db?sslmode=disable"
+
+# Obrigatório para upload de imagens: Cloudinary URL
+export CLOUDINARY_URL="cloudinary://API_KEY:API_SECRET@CLOUD_NAME"
 
 # Executar servidor
 go run ./cmd/api

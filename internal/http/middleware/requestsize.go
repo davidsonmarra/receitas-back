@@ -27,4 +27,3 @@ func RequestSizeLimit(next http.Handler) http.Handler {
 func handleRequestTooLarge(w http.ResponseWriter) {
 	response.ValidationError(w, "A requisição é muito grande. Limite: 1MB.")
 }
-

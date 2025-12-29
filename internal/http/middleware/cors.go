@@ -51,4 +51,3 @@ func getAllowedOrigins() []string {
 		"http://[::1]:*",
 	}
 }
-

@@ -94,9 +94,9 @@ func AdminUpdateRecipe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID, _ := middleware.GetUserIDFromContext(r.Context())
-	log.InfoCtx(r.Context(), "admin updated recipe", 
-		"admin_id", userID, 
-		"recipe_id", recipe.ID, 
+	log.InfoCtx(r.Context(), "admin updated recipe",
+		"admin_id", userID,
+		"recipe_id", recipe.ID,
 		"recipe_owner", recipe.UserID)
 
 	response.JSON(w, http.StatusOK, recipe)
@@ -120,9 +120,9 @@ func AdminDeleteRecipe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID, _ := middleware.GetUserIDFromContext(r.Context())
-	log.InfoCtx(r.Context(), "admin deleted recipe", 
-		"admin_id", userID, 
-		"recipe_id", id, 
+	log.InfoCtx(r.Context(), "admin deleted recipe",
+		"admin_id", userID,
+		"recipe_id", id,
 		"recipe_owner", recipe.UserID,
 		"recipe_title", recipe.Title)
 
@@ -155,11 +155,10 @@ func AdminCreateGeneralRecipe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID, _ := middleware.GetUserIDFromContext(r.Context())
-	log.InfoCtx(r.Context(), "admin created general recipe", 
-		"admin_id", userID, 
+	log.InfoCtx(r.Context(), "admin created general recipe",
+		"admin_id", userID,
 		"recipe_id", recipe.ID,
 		"recipe_title", recipe.Title)
 
 	response.JSON(w, http.StatusCreated, recipe)
 }
-

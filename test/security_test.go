@@ -10,12 +10,12 @@ import (
 
 func TestSecurityHeaders(t *testing.T) {
 	router := routes.Setup()
-	
+
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
-	
+
 	router.ServeHTTP(w, req)
-	
+
 	// Verificar headers de segurança
 	tests := []struct {
 		header   string
@@ -28,7 +28,7 @@ func TestSecurityHeaders(t *testing.T) {
 		{"Referrer-Policy", "strict-origin-when-cross-origin"},
 		{"Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()"},
 	}
-	
+
 	for _, tt := range tests {
 		got := w.Header().Get(tt.header)
 		if got != tt.expected {
@@ -39,17 +39,17 @@ func TestSecurityHeaders(t *testing.T) {
 
 func TestSecurityHeaders_HSTS(t *testing.T) {
 	router := routes.Setup()
-	
+
 	// Simular requisição HTTPS (via proxy)
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.Header.Set("X-Forwarded-Proto", "https")
 	w := httptest.NewRecorder()
-	
+
 	router.ServeHTTP(w, req)
-	
+
 	hsts := w.Header().Get("Strict-Transport-Security")
 	expected := "max-age=31536000; includeSubDomains; preload"
-	
+
 	if hsts != expected {
 		t.Errorf("HSTS header: got %q, want %q", hsts, expected)
 	}
@@ -57,17 +57,16 @@ func TestSecurityHeaders_HSTS(t *testing.T) {
 
 func TestSecurityHeaders_NoHSTSOnHTTP(t *testing.T) {
 	router := routes.Setup()
-	
+
 	// Requisição HTTP (sem X-Forwarded-Proto)
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	w := httptest.NewRecorder()
-	
+
 	router.ServeHTTP(w, req)
-	
+
 	hsts := w.Header().Get("Strict-Transport-Security")
-	
+
 	if hsts != "" {
 		t.Errorf("HSTS header should not be set on HTTP: got %q", hsts)
 	}
 }
-

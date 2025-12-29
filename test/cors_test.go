@@ -89,4 +89,3 @@ func TestCORS_ExposedHeaders(t *testing.T) {
 		t.Logf("✅ X-Request-ID present: %s", requestID)
 	}
 }
-

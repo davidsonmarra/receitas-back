@@ -41,9 +41,9 @@ func ListIngredients(w http.ResponseWriter, r *http.Request) {
 				"WHEN LOWER(name) LIKE ? THEN 2 "+
 				"WHEN LOWER(category) LIKE ? THEN 3 "+
 				"ELSE 4 END",
-			searchStart,    // nome começa com termo
-			searchPattern,  // nome contém termo
-			searchPattern,  // categoria contém termo
+			searchStart,   // nome começa com termo
+			searchPattern, // nome contém termo
+			searchPattern, // categoria contém termo
 		))
 	} else {
 		// Sem busca, ordenar alfabeticamente
@@ -189,4 +189,3 @@ func GetCategories(w http.ResponseWriter, r *http.Request) {
 		"categories": categories,
 	})
 }
-

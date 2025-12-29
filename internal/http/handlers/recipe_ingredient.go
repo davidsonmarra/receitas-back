@@ -223,4 +223,3 @@ func GetRecipeNutrition(w http.ResponseWriter, r *http.Request) {
 		"servings": recipe.Servings,
 	})
 }
-

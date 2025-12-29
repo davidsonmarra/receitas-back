@@ -91,7 +91,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.InfoCtx(r.Context(), "user registered", "id", user.ID, "email", user.Email, "role", user.Role)
-	
+
 	authResponse := AuthResponse{
 		User:  user,
 		Token: token,
@@ -143,7 +143,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.InfoCtx(r.Context(), "user logged in", "id", user.ID, "email", user.Email, "role", user.Role)
-	
+
 	authResponse := AuthResponse{
 		User:  user,
 		Token: token,
@@ -180,4 +180,3 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	log.InfoCtx(r.Context(), "user logged out", "user_id", claims.UserID)
 	response.JSON(w, http.StatusOK, map[string]string{"message": "Logout realizado com sucesso"})
 }
-

@@ -111,11 +111,11 @@ func TestCalculateOffset(t *testing.T) {
 
 func TestBuildMetadata(t *testing.T) {
 	tests := []struct {
-		name           string
-		page           int
-		limit          int
-		total          int64
-		expectedPages  int
+		name            string
+		page            int
+		limit           int
+		total           int64
+		expectedPages   int
 		expectedHasNext bool
 		expectedHasPrev bool
 	}{
@@ -183,4 +183,3 @@ func TestBuildResponse(t *testing.T) {
 		t.Errorf("Expected total_pages 5, got %d", response.Pagination.TotalPages)
 	}
 }
-

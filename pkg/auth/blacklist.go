@@ -52,4 +52,3 @@ func (b *tokenBlacklist) cleanupExpired() {
 		b.mu.Unlock()
 	}
 }
-

@@ -94,4 +94,3 @@ func main() {
 	fmt.Println("⚠️  IMPORTANTE: TROCAR SENHA EM PRODUÇÃO!")
 	fmt.Println()
 }
-

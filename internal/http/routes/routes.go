@@ -16,15 +16,15 @@ func Setup() *chi.Mux {
 	rateLimitConfig := customMiddleware.LoadRateLimitConfig()
 
 	// Middlewares globais
-	r.Use(customMiddleware.SetupCORS())      // CORS - deve ser o primeiro
-	r.Use(customMiddleware.SecurityHeaders)  // Security headers
-	r.Use(customMiddleware.RequestID)        // Adiciona Request ID a cada requisição
-	
+	r.Use(customMiddleware.SetupCORS())     // CORS - deve ser o primeiro
+	r.Use(customMiddleware.SecurityHeaders) // Security headers
+	r.Use(customMiddleware.RequestID)       // Adiciona Request ID a cada requisição
+
 	// Rate limit global (se habilitado)
 	if rateLimitConfig.Enabled {
 		r.Use(customMiddleware.RateLimitGlobal(rateLimitConfig.Global))
 	}
-	
+
 	r.Use(customMiddleware.RequestSizeLimit) // Limita tamanho do body da requisição
 	r.Use(middleware.Recoverer)              // Recupera de panics
 
@@ -36,10 +36,10 @@ func Setup() *chi.Mux {
 	r.Route("/users", func(r chi.Router) {
 		// POST /users/register - rate limit de escrita
 		r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/register", handlers.Register)
-		
+
 		// POST /users/login - rate limit de escrita
 		r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/login", handlers.Login)
-		
+
 		// POST /users/logout - requer autenticação
 		r.With(customMiddleware.RequireAuth).Post("/logout", handlers.Logout)
 	})
@@ -49,19 +49,32 @@ func Setup() *chi.Mux {
 		// Rotas públicas (sem autenticação)
 		// GET /recipes - rate limit de leitura
 		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/", handlers.ListRecipes)
-		
+
 		// GET /recipes/{id} - rate limit de leitura
 		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/{id}", handlers.GetRecipe)
-		
+
+		// Rotas de imagens (públicas para leitura)
+		// GET /recipes/{id}/image/variants - obter URLs otimizadas
+		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/{id}/image/variants", handlers.GetRecipeImageVariants)
+
+		// GET /recipes/{id}/image/optimized - obter URL otimizada customizada
+		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/{id}/image/optimized", handlers.GetOptimizedRecipeImage)
+
 		// Rotas protegidas (requer autenticação)
 		// POST /recipes - requer auth + rate limit de escrita
 		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/", handlers.CreateRecipe)
-		
+
 		// PUT /recipes/{id} - requer auth + rate limit de escrita
 		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Put("/{id}", handlers.UpdateRecipe)
-		
+
 		// DELETE /recipes/{id} - requer auth + rate limit de escrita
 		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/{id}", handlers.DeleteRecipe)
+
+		// POST /recipes/{id}/image - upload de imagem
+		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/{id}/image", handlers.UploadRecipeImage)
+
+		// DELETE /recipes/{id}/image - deletar imagem
+		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/{id}/image", handlers.DeleteRecipeImage)
 	})
 
 	// Rotas de ingredientes (públicas para leitura)

@@ -855,13 +855,143 @@
       "parentId": "fld_recipe_ingredients"
     },
     {
-      "_id": "fld_admin_ingredients",
+      "_id": "fld_recipe_images",
       "_type": "request_group",
-      "name": "7. Admin - Ingredients",
-      "description": "CRUD de ingredientes - Requer role admin (Execute Login Admin primeiro)",
+      "name": "7. Recipe Images",
+      "description": "Upload e gerenciamento de imagens de receitas com Cloudinary",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": 8,
+      "parentId": "wrk_receitas_app"
+    },
+    {
+      "_id": "req_upload_recipe_image",
+      "_type": "request",
+      "name": "Upload Recipe Image",
+      "url": "{{ _.base_url }}/recipes/1/image",
+      "method": "POST",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "image",
+            "value": "",
+            "description": "Selecione uma imagem (JPG, PNG, GIF, WEBP, BMP - máx 5MB)",
+            "type": "file"
+          }
+        ]
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Upload de imagem para receita (substitui imagem anterior se existir)",
+      "parentId": "fld_recipe_images"
+    },
+    {
+      "_id": "req_delete_recipe_image",
+      "_type": "request",
+      "name": "Delete Recipe Image",
+      "url": "{{ _.base_url }}/recipes/1/image",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Remove imagem da receita (requer ownership)",
+      "parentId": "fld_recipe_images"
+    },
+    {
+      "_id": "req_get_image_variants",
+      "_type": "request",
+      "name": "Get Image Variants",
+      "url": "{{ _.base_url }}/recipes/1/image/variants",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Retorna URLs otimizadas em múltiplos tamanhos (thumbnail, medium, large, original)",
+      "parentId": "fld_recipe_images"
+    },
+    {
+      "_id": "req_get_optimized_image",
+      "_type": "request",
+      "name": "Get Optimized Image URL",
+      "url": "{{ _.base_url }}/recipes/1/image/optimized",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "width",
+          "value": "800",
+          "description": "Largura desejada (1-2000)"
+        },
+        {
+          "name": "height",
+          "value": "600",
+          "description": "Altura desejada (1-2000)"
+        },
+        {
+          "name": "quality",
+          "value": "auto",
+          "description": "Qualidade: auto, best, good, eco, low"
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Gera URL otimizada com dimensões e qualidade customizadas",
+      "parentId": "fld_recipe_images"
+    },
+    {
+      "_id": "fld_admin_ingredients",
+      "_type": "request_group",
+      "name": "8. Admin - Ingredients",
+      "description": "CRUD de ingredientes - Requer role admin (Execute Login Admin primeiro)",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 9,
       "parentId": "wrk_receitas_app"
     },
     {
@@ -959,11 +1089,11 @@
     {
       "_id": "fld_rate_limit",
       "_type": "request_group",
-      "name": "8. Rate Limit Tests",
+      "name": "9. Rate Limit Tests",
       "description": "Testes de rate limiting - Execute múltiplas vezes para testar limites",
       "environment": {},
       "environmentPropertyOrder": null,
-      "metaSortKey": 9,
+      "metaSortKey": 10,
       "parentId": "wrk_receitas_app"
     },
     {

@@ -78,10 +78,9 @@ func TestValidateToken_Expiration(t *testing.T) {
 	// Verificar que expira em aproximadamente 24 horas
 	expectedExpiration := time.Now().Add(24 * time.Hour)
 	diff := claims.ExpiresAt.Time.Sub(expectedExpiration)
-	
+
 	// Permitir 1 minuto de diferença (tolerância para execução do teste)
 	if diff > time.Minute || diff < -time.Minute {
 		t.Errorf("expiração incorreta: esperado ~24h, diferença: %v", diff)
 	}
 }
-

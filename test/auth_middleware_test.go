@@ -149,4 +149,3 @@ func TestGetUserEmailFromContext(t *testing.T) {
 		t.Errorf("esperado email %s no contexto, obteve %s", email, contextEmail)
 	}
 }
-

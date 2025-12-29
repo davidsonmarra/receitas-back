@@ -132,7 +132,7 @@ func parseTACOCSV(filePath string) ([]models.Ingredient, error) {
 		// Extrair dados
 		categoria := normalizarCategoria(record[categoriaCol])
 		descricao := strings.TrimSpace(record[descricaoCol])
-		
+
 		// Pular se não tiver descrição
 		if descricao == "" {
 			continue
@@ -171,10 +171,10 @@ func parseTACOCSV(filePath string) ([]models.Ingredient, error) {
 // parseFloat converte string para float64, tratando valores inválidos
 func parseFloat(s string) float64 {
 	s = strings.TrimSpace(s)
-	
+
 	// Substituir vírgula por ponto
 	s = strings.Replace(s, ",", ".", 1)
-	
+
 	// Tratar valores especiais
 	if s == "" || s == "NA" || s == "*" || s == "Tr" || s == " " {
 		return 0
@@ -197,10 +197,10 @@ func parseFloat(s string) float64 {
 func normalizarCategoria(s string) string {
 	s = strings.TrimSpace(s)
 	s = strings.ToLower(s)
-	
+
 	// Remover "e derivados"
 	s = strings.Replace(s, " e derivados", "", 1)
-	
+
 	// Simplificar nomes longos
 	switch {
 	case strings.Contains(s, "cereais"):

@@ -94,7 +94,7 @@ func getClientIP(r *http.Request) string {
 // rateLimitResponse envia uma resposta 429 formatada
 func rateLimitResponse(w http.ResponseWriter, r *http.Request) {
 	log.WarnCtx(r.Context(), "rate limit exceeded")
-	
+
 	response.JSON(w, http.StatusTooManyRequests, map[string]interface{}{
 		"error": map[string]string{
 			"title":   "Ops, muitas requisições!",
@@ -106,7 +106,7 @@ func rateLimitResponse(w http.ResponseWriter, r *http.Request) {
 // RateLimitGlobal cria um middleware de rate limit global por IP
 func RateLimitGlobal(requestsPerMinute int) func(http.Handler) http.Handler {
 	log.Info("creating global rate limiter", "limit", requestsPerMinute)
-	
+
 	return httprate.Limit(
 		requestsPerMinute,
 		time.Minute,
@@ -144,4 +144,3 @@ func RateLimitWrite(config RateLimitConfig) func(http.Handler) http.Handler {
 	}
 	return RateLimitEndpoint(config.Write)
 }
-

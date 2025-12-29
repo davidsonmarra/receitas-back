@@ -28,4 +28,3 @@ func (User) TableName() string {
 // func (u *User) IsAdmin() bool {
 // 	return u.Role == "admin"
 // }
-

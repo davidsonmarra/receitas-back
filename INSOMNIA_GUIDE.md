@@ -273,6 +273,108 @@ Para usar credenciais diferentes:
 - [Ingredientes](INGREDIENTS_IMPLEMENTATION.md)
 - [Rate Limiting](RATE_LIMIT_IMPLEMENTATION.md)
 
+## 📸 Upload de Imagens
+
+### Como fazer Upload de Imagem para Receita
+
+1. **Fazer Login** (obter token)
+
+   - Executar: `POST Login User` ou `POST Login Admin`
+
+2. **Criar uma Receita** (ou usar uma existente)
+
+   - Executar: `POST Create Recipe`
+   - Copiar o `id` da receita criada
+
+3. **Configurar Request de Upload**
+
+   - Método: `POST`
+   - URL: `{{base_url}}/recipes/1/image` (substitua 1 pelo id da receita)
+   - Auth: Bearer Token → `{{auth_token}}`
+   - Body: **Multipart Form**
+
+4. **Adicionar Imagem ao Body**
+
+   - Tipo do Body: **Multipart Form**
+   - Adicionar campo:
+     - **Name**: `image`
+     - **Type**: `File`
+     - **Value**: Clique em **Choose File** e selecione uma imagem
+
+5. **Enviar Request**
+
+### Exemplo de Response de Upload
+
+```json
+{
+  "message": "Imagem enviada com sucesso",
+  "image_url": "https://res.cloudinary.com/seu-cloud/image/upload/v123/recipes/recipe_1.jpg",
+  "image_public_id": "recipes/recipe_1_1234567890",
+  "width": 1920,
+  "height": 1080,
+  "format": "jpg",
+  "size_bytes": 245678
+}
+```
+
+### Ver Receita com Imagem
+
+Executar `GET /recipes/{id}` para ver a receita com `image_url` preenchido:
+
+```json
+{
+  "id": 1,
+  "title": "Bolo de Chocolate",
+  "image_url": "https://res.cloudinary.com/.../recipes/recipe_1.jpg",
+  "image_public_id": "recipes/recipe_1_1234567890",
+  ...
+}
+```
+
+### Obter Variantes da Imagem (thumbnail, medium, large)
+
+```
+GET {{base_url}}/recipes/1/image/variants
+```
+
+Response:
+
+```json
+{
+  "thumbnail": {
+    "url": "https://res.cloudinary.com/.../w_300,h_300,.../recipe_1.jpg",
+    "width": 300,
+    "height": 300
+  },
+  "medium": {
+    "url": "https://res.cloudinary.com/.../w_600,h_600,.../recipe_1.jpg",
+    "width": 600,
+    "height": 600
+  },
+  "large": {
+    "url": "https://res.cloudinary.com/.../w_1200,h_1200,.../recipe_1.jpg",
+    "width": 1200,
+    "height": 1200
+  },
+  "original": {
+    "url": "https://res.cloudinary.com/.../recipes/recipe_1.jpg"
+  }
+}
+```
+
+### Obter URL Otimizada Customizada
+
+```
+GET {{base_url}}/recipes/1/image/optimized?width=500&height=400&quality=auto
+```
+
+### Deletar Imagem
+
+```
+DELETE {{base_url}}/recipes/1/image
+Authorization: Bearer {{auth_token}}
+```
+
 ## 🎓 Dicas Avançadas
 
 ### 1. Usar Request Runner

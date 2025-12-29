@@ -140,7 +140,7 @@ func TestUpdateRecipe_OwnRecipe(t *testing.T) {
 
 	// Aplicar middleware e handler
 	handler := middleware.RequireAuth(http.HandlerFunc(handlers.UpdateRecipe))
-	
+
 	// Adicionar parâmetro de rota manualmente
 	req = req.WithContext(req.Context())
 	// Nota: Em teste real com chi router, o parâmetro seria injetado automaticamente
@@ -338,4 +338,3 @@ func TestUpdateRecipe_GeneralRecipe_NonAdmin(t *testing.T) {
 		t.Logf("Status code: %d (esperado 403 ou 404 para receita geral)", rec.Code)
 	}
 }
-

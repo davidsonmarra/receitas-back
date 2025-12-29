@@ -77,4 +77,3 @@ func TestHashPassword_DifferentHashes(t *testing.T) {
 		t.Error("segundo hash deveria validar a senha")
 	}
 }
-

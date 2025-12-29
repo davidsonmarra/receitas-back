@@ -460,4 +460,3 @@ func TestSearchWithCategoryFilter(t *testing.T) {
 		}
 	}
 }
-

@@ -34,22 +34,21 @@ func RequireAdmin(next http.Handler) http.Handler {
 
 		// Verificar se é admin (fail secure: qualquer coisa != "admin" nega)
 		if user.Role != "admin" {
-			log.WarnCtx(r.Context(), "non-admin attempted admin access", 
-				"user_id", userID, 
-				"role", user.Role, 
-				"path", r.URL.Path, 
+			log.WarnCtx(r.Context(), "non-admin attempted admin access",
+				"user_id", userID,
+				"role", user.Role,
+				"path", r.URL.Path,
 				"method", r.Method)
 			response.Error(w, http.StatusForbidden, "Acesso restrito a administradores")
 			return
 		}
 
 		// Log de acesso admin bem-sucedido (auditoria)
-		log.InfoCtx(r.Context(), "admin access granted", 
-			"user_id", userID, 
-			"path", r.URL.Path, 
+		log.InfoCtx(r.Context(), "admin access granted",
+			"user_id", userID,
+			"path", r.URL.Path,
 			"method", r.Method)
 
 		next.ServeHTTP(w, r)
 	})
 }
-

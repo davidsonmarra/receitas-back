@@ -31,7 +31,7 @@ func ValidateStruct(s interface{}) []string {
 // translateError traduz um erro de validação para português
 func translateError(err validator.FieldError) string {
 	field := translateField(err.Field())
-	
+
 	switch err.Tag() {
 	case "required":
 		return fmt.Sprintf("o %s é obrigatório", field)
@@ -96,4 +96,3 @@ func FormatErrors(errors []string) string {
 	// Primeira letra maiúscula e adicionar ponto final
 	return strings.ToUpper(string(firstError[0])) + firstError[1:] + "."
 }
-

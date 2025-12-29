@@ -284,4 +284,3 @@ func TestNonAdminCannotDeleteGeneralRecipe(t *testing.T) {
 		t.Logf("Status code: %d (esperado 403 ou 404)", rec.Code)
 	}
 }
-

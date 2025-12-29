@@ -13,7 +13,7 @@ import (
 type contextKey string
 
 const (
-	UserIDKey  contextKey = "user_id"
+	UserIDKey    contextKey = "user_id"
 	UserEmailKey contextKey = "user_email"
 )
 
@@ -67,4 +67,3 @@ func GetUserEmailFromContext(ctx context.Context) (string, bool) {
 	email, ok := ctx.Value(UserEmailKey).(string)
 	return email, ok
 }
-

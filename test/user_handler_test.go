@@ -23,7 +23,7 @@ func setupUserTestDB(t *testing.T) {
 
 	// Limpar tabela users para testes isolados
 	database.DB.Exec("DELETE FROM users")
-	
+
 	// Executar migrations
 	if err := database.DB.AutoMigrate(&models.User{}); err != nil {
 		t.Fatalf("erro ao executar migrations: %v", err)
@@ -288,4 +288,3 @@ func TestLogout_InvalidToken(t *testing.T) {
 		t.Errorf("esperado status 401, obteve %d", rec.Code)
 	}
 }
-
