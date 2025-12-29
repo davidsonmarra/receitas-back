@@ -11,7 +11,7 @@ func TestGenerateToken(t *testing.T) {
 	userID := uint(123)
 	email := "test@example.com"
 
-	token, err := auth.GenerateToken(userID, email)
+	token, err := auth.GenerateToken(userID, email, "user")
 	if err != nil {
 		t.Fatalf("erro ao gerar token: %v", err)
 	}
@@ -25,7 +25,7 @@ func TestValidateToken_Success(t *testing.T) {
 	userID := uint(456)
 	email := "valid@example.com"
 
-	token, err := auth.GenerateToken(userID, email)
+	token, err := auth.GenerateToken(userID, email, "user")
 	if err != nil {
 		t.Fatalf("erro ao gerar token: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestValidateToken_Expiration(t *testing.T) {
 	userID := uint(789)
 	email := "expiring@example.com"
 
-	token, err := auth.GenerateToken(userID, email)
+	token, err := auth.GenerateToken(userID, email, "user")
 	if err != nil {
 		t.Fatalf("erro ao gerar token: %v", err)
 	}

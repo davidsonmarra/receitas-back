@@ -9,9 +9,20 @@ import (
 	"testing"
 
 	"github.com/davidsonmarra/receitas-app/internal/http/routes"
+	"github.com/davidsonmarra/receitas-app/pkg/auth"
+	"github.com/davidsonmarra/receitas-app/test/testdb"
 )
 
 func TestCreateRecipe_ValidationErrors(t *testing.T) {
+	testdb.SetupWithCleanup(t)
+	
+	// Criar usuário de teste e gerar token
+	user := testdb.SeedUser(t, "Test User", "validation@test.com", "hashed_password", "user")
+	token, err := auth.GenerateToken(user.ID, user.Email, user.Role)
+	if err != nil {
+		t.Fatalf("erro ao gerar token: %v", err)
+	}
+	
 	router := routes.Setup()
 
 	tests := []struct {
@@ -98,6 +109,7 @@ func TestCreateRecipe_ValidationErrors(t *testing.T) {
 			body, _ := json.Marshal(tt.payload)
 			req := httptest.NewRequest(http.MethodPost, "/recipes", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+token)
 
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)

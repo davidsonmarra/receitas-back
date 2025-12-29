@@ -7,9 +7,12 @@ import (
 	"testing"
 
 	"github.com/davidsonmarra/receitas-app/internal/http/handlers"
+	"github.com/davidsonmarra/receitas-app/test/testdb"
 )
 
 func TestHealthHandler(t *testing.T) {
+	testdb.SetupWithCleanup(t)
+
 	// Cria uma requisição HTTP de teste
 	req, err := http.NewRequest("GET", "/health", nil)
 	if err != nil {

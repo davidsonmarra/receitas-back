@@ -58,7 +58,7 @@ func TestRequireAuth_InvalidToken(t *testing.T) {
 
 func TestRequireAuth_ValidToken(t *testing.T) {
 	// Gerar um token válido
-	token, err := auth.GenerateToken(123, "test@example.com")
+	token, err := auth.GenerateToken(123, "test@example.com", "user")
 	if err != nil {
 		t.Fatalf("erro ao gerar token: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestRequireAuth_ValidToken(t *testing.T) {
 
 func TestRequireAuth_BlacklistedToken(t *testing.T) {
 	// Gerar um token válido
-	token, err := auth.GenerateToken(456, "blacklisted@example.com")
+	token, err := auth.GenerateToken(456, "blacklisted@example.com", "user")
 	if err != nil {
 		t.Fatalf("erro ao gerar token: %v", err)
 	}
@@ -123,7 +123,7 @@ func TestRequireAuth_BlacklistedToken(t *testing.T) {
 func TestGetUserEmailFromContext(t *testing.T) {
 	// Gerar um token válido
 	email := "context@example.com"
-	token, err := auth.GenerateToken(789, email)
+	token, err := auth.GenerateToken(789, email, "user")
 	if err != nil {
 		t.Fatalf("erro ao gerar token: %v", err)
 	}

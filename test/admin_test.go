@@ -11,37 +11,15 @@ import (
 	"github.com/davidsonmarra/receitas-app/internal/http/middleware"
 	"github.com/davidsonmarra/receitas-app/internal/models"
 	"github.com/davidsonmarra/receitas-app/pkg/auth"
-	"github.com/davidsonmarra/receitas-app/pkg/database"
+	"github.com/davidsonmarra/receitas-app/test/testdb"
 )
 
-// setupAdminTestDB inicializa database para testes de admin
-func setupAdminTestDB(t *testing.T) {
-	if database.DB == nil {
-		t.Skip("DATABASE_URL não configurado para testes")
-	}
-
-	// Limpar tabelas
-	database.DB.Exec("DELETE FROM recipes")
-	database.DB.Exec("DELETE FROM users")
-
-	// Executar migrations
-	if err := database.DB.AutoMigrate(&models.User{}, &models.Recipe{}); err != nil {
-		t.Fatalf("erro ao executar migrations: %v", err)
-	}
-}
-
 func TestRequireAdmin_NonAdmin(t *testing.T) {
-	setupAdminTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar usuário normal
 	hashedPassword, _ := auth.HashPassword("senha123")
-	user := models.User{
-		Name:     "Usuário Normal",
-		Email:    "normal@test.com",
-		Password: hashedPassword,
-		Role:     "user",
-	}
-	database.DB.Create(&user)
+	user := testdb.SeedUser(t, "Usuário Normal", "normal@test.com", hashedPassword, "user")
 
 	// Gerar token
 	token, _ := auth.GenerateToken(user.ID, user.Email, user.Role)
@@ -68,17 +46,11 @@ func TestRequireAdmin_NonAdmin(t *testing.T) {
 }
 
 func TestRequireAdmin_Admin(t *testing.T) {
-	setupAdminTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar admin
 	hashedPassword, _ := auth.HashPassword("admin123")
-	admin := models.User{
-		Name:     "Administrador",
-		Email:    "admin@test.com",
-		Password: hashedPassword,
-		Role:     "admin",
-	}
-	database.DB.Create(&admin)
+	admin := testdb.SeedUser(t, "Administrador", "admin@test.com", hashedPassword, "admin")
 
 	// Gerar token
 	token, _ := auth.GenerateToken(admin.ID, admin.Email, admin.Role)
@@ -106,17 +78,11 @@ func TestRequireAdmin_Admin(t *testing.T) {
 }
 
 func TestAdminCreateGeneralRecipe(t *testing.T) {
-	setupAdminTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar admin
 	hashedPassword, _ := auth.HashPassword("admin123")
-	admin := models.User{
-		Name:     "Admin",
-		Email:    "admin2@test.com",
-		Password: hashedPassword,
-		Role:     "admin",
-	}
-	database.DB.Create(&admin)
+	admin := testdb.SeedUser(t, "Admin", "admin2@test.com", hashedPassword, "admin")
 
 	// Gerar token
 	token, _ := auth.GenerateToken(admin.ID, admin.Email, admin.Role)
@@ -153,35 +119,17 @@ func TestAdminCreateGeneralRecipe(t *testing.T) {
 }
 
 func TestCanModifyRecipe_AsAdmin(t *testing.T) {
-	setupAdminTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar usuário normal (dono da receita)
 	hashedPassword, _ := auth.HashPassword("senha123")
-	owner := models.User{
-		Name:     "Dono",
-		Email:    "owner@test.com",
-		Password: hashedPassword,
-		Role:     "user",
-	}
-	database.DB.Create(&owner)
+	owner := testdb.SeedUser(t, "Dono", "owner@test.com", hashedPassword, "user")
 
 	// Criar receita do dono
-	recipe := models.Recipe{
-		Title:    "Receita do Usuário",
-		PrepTime: 30,
-		Servings: 4,
-		UserID:   &owner.ID,
-	}
-	database.DB.Create(&recipe)
+	_ = testdb.SeedRecipe(t, "Receita do Usuário", "Receita de teste", owner.ID, false)
 
 	// Criar admin
-	admin := models.User{
-		Name:     "Admin",
-		Email:    "admin3@test.com",
-		Password: hashedPassword,
-		Role:     "admin",
-	}
-	database.DB.Create(&admin)
+	admin := testdb.SeedUser(t, "Admin", "admin3@test.com", hashedPassword, "admin")
 
 	// Gerar token do admin
 	token, _ := auth.GenerateToken(admin.ID, admin.Email, admin.Role)
@@ -208,26 +156,14 @@ func TestCanModifyRecipe_AsAdmin(t *testing.T) {
 }
 
 func TestAdminDeleteGeneralRecipe(t *testing.T) {
-	setupAdminTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar receita geral (sem dono)
-	recipe := models.Recipe{
-		Title:    "Receita Geral",
-		PrepTime: 30,
-		Servings: 4,
-		UserID:   nil,
-	}
-	database.DB.Create(&recipe)
+	_ = testdb.SeedRecipe(t, "Receita Geral", "Receita pública", 0, true)
 
 	// Criar admin
 	hashedPassword, _ := auth.HashPassword("admin123")
-	admin := models.User{
-		Name:     "Admin",
-		Email:    "admin4@test.com",
-		Password: hashedPassword,
-		Role:     "admin",
-	}
-	database.DB.Create(&admin)
+	admin := testdb.SeedUser(t, "Admin", "admin4@test.com", hashedPassword, "admin")
 
 	// Gerar token
 	token, _ := auth.GenerateToken(admin.ID, admin.Email, admin.Role)
@@ -247,26 +183,14 @@ func TestAdminDeleteGeneralRecipe(t *testing.T) {
 }
 
 func TestNonAdminCannotDeleteGeneralRecipe(t *testing.T) {
-	setupAdminTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar receita geral
-	recipe := models.Recipe{
-		Title:    "Receita Geral",
-		PrepTime: 30,
-		Servings: 4,
-		UserID:   nil,
-	}
-	database.DB.Create(&recipe)
+	_ = testdb.SeedRecipe(t, "Receita Geral", "Receita pública", 0, true)
 
 	// Criar usuário normal
 	hashedPassword, _ := auth.HashPassword("senha123")
-	user := models.User{
-		Name:     "Usuário Normal",
-		Email:    "user@test.com",
-		Password: hashedPassword,
-		Role:     "user",
-	}
-	database.DB.Create(&user)
+	user := testdb.SeedUser(t, "Usuário Normal", "user@test.com", hashedPassword, "user")
 
 	// Gerar token
 	token, _ := auth.GenerateToken(user.ID, user.Email, user.Role)

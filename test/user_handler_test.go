@@ -11,27 +11,11 @@ import (
 	"github.com/davidsonmarra/receitas-app/internal/models"
 	"github.com/davidsonmarra/receitas-app/pkg/auth"
 	"github.com/davidsonmarra/receitas-app/pkg/database"
+	"github.com/davidsonmarra/receitas-app/test/testdb"
 )
 
-// setupTestDB inicializa um database de teste
-func setupUserTestDB(t *testing.T) {
-	if database.DB == nil {
-		// Para testes, usar um banco em memória ou configurar DATABASE_URL
-		// Por ora, vamos pular testes que requerem DB se não estiver configurado
-		t.Skip("DATABASE_URL não configurado para testes")
-	}
-
-	// Limpar tabela users para testes isolados
-	database.DB.Exec("DELETE FROM users")
-
-	// Executar migrations
-	if err := database.DB.AutoMigrate(&models.User{}); err != nil {
-		t.Fatalf("erro ao executar migrations: %v", err)
-	}
-}
-
 func TestRegister_Success(t *testing.T) {
-	setupUserTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	payload := map[string]string{
 		"name":     "João Silva",
@@ -67,7 +51,7 @@ func TestRegister_Success(t *testing.T) {
 }
 
 func TestRegister_DuplicateEmail(t *testing.T) {
-	setupUserTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar primeiro usuário
 	payload := map[string]string{
@@ -107,7 +91,7 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 }
 
 func TestRegister_ValidationErrors(t *testing.T) {
-	setupUserTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	tests := []struct {
 		name     string
@@ -153,7 +137,7 @@ func TestRegister_ValidationErrors(t *testing.T) {
 }
 
 func TestLogin_Success(t *testing.T) {
-	setupUserTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar usuário primeiro
 	hashedPassword, _ := auth.HashPassword("senha123")
@@ -194,7 +178,7 @@ func TestLogin_Success(t *testing.T) {
 }
 
 func TestLogin_WrongPassword(t *testing.T) {
-	setupUserTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar usuário
 	hashedPassword, _ := auth.HashPassword("senha-correta")
@@ -224,7 +208,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 }
 
 func TestLogin_UserNotFound(t *testing.T) {
-	setupUserTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	payload := map[string]string{
 		"email":    "naoexiste@test.com",
@@ -245,7 +229,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 
 func TestLogout_Success(t *testing.T) {
 	// Gerar token válido
-	token, err := auth.GenerateToken(123, "logout@test.com")
+	token, err := auth.GenerateToken(123, "logout@test.com", "user")
 	if err != nil {
 		t.Fatalf("erro ao gerar token: %v", err)
 	}

@@ -306,16 +306,16 @@ func GetOptimizedRecipeImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Inicializar serviço Cloudinary
-	cloudinaryService, err := storage.NewCloudinaryService()
+	// Inicializar serviço de imagens
+	imageService, err := storage.ServiceFactory()
 	if err != nil {
-		log.ErrorCtx(r.Context(), "failed to initialize cloudinary", "error", err)
+		log.ErrorCtx(r.Context(), "failed to initialize image service", "error", err)
 		response.Error(w, http.StatusInternalServerError, "Erro ao configurar serviço de imagens")
 		return
 	}
 
 	// Gerar URL otimizada
-	optimizedURL, err := cloudinaryService.GetOptimizedURL(recipe.ImagePublicID, width, height, quality)
+	optimizedURL, err := imageService.GetOptimizedURL(recipe.ImagePublicID, width, height, quality)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Erro ao gerar URL otimizada")
 		return

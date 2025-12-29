@@ -2,7 +2,9 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,32 +14,12 @@ import (
 	"github.com/davidsonmarra/receitas-app/internal/models"
 	"github.com/davidsonmarra/receitas-app/pkg/auth"
 	"github.com/davidsonmarra/receitas-app/pkg/database"
+	"github.com/davidsonmarra/receitas-app/test/testdb"
+	"github.com/go-chi/chi/v5"
 )
 
-func setupIngredientTestDB(t *testing.T) {
-	if database.DB == nil {
-		t.Skip("DATABASE_URL não configurado para testes")
-	}
-
-	// Limpar tabelas
-	database.DB.Exec("DELETE FROM recipe_ingredients")
-	database.DB.Exec("DELETE FROM ingredients")
-	database.DB.Exec("DELETE FROM recipes")
-	database.DB.Exec("DELETE FROM users")
-
-	// Executar migrations
-	if err := database.DB.AutoMigrate(
-		&models.User{},
-		&models.Recipe{},
-		&models.Ingredient{},
-		&models.RecipeIngredient{},
-	); err != nil {
-		t.Fatalf("erro ao executar migrations: %v", err)
-	}
-}
-
 func TestListIngredients(t *testing.T) {
-	setupIngredientTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar alguns ingredientes de teste
 	ing1 := models.Ingredient{
@@ -82,7 +64,7 @@ func TestListIngredients(t *testing.T) {
 }
 
 func TestGetIngredient(t *testing.T) {
-	setupIngredientTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar ingrediente de teste
 	ing := models.Ingredient{
@@ -107,7 +89,7 @@ func TestGetIngredient(t *testing.T) {
 }
 
 func TestCreateIngredient_Admin(t *testing.T) {
-	setupIngredientTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar admin
 	hashedPassword, _ := auth.HashPassword("admin123")
@@ -149,7 +131,7 @@ func TestCreateIngredient_Admin(t *testing.T) {
 }
 
 func TestAddRecipeIngredient(t *testing.T) {
-	setupIngredientTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar usuário
 	hashedPassword, _ := auth.HashPassword("senha123")
@@ -208,7 +190,7 @@ func TestAddRecipeIngredient(t *testing.T) {
 }
 
 func TestCalculateRecipeNutrition(t *testing.T) {
-	setupIngredientTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar receita
 	user := models.User{
@@ -248,7 +230,13 @@ func TestCalculateRecipeNutrition(t *testing.T) {
 	}
 	database.DB.Create(&recipeIng)
 
-	req := httptest.NewRequest("GET", "/recipes/1/nutrition", nil)
+	req := httptest.NewRequest("GET", fmt.Sprintf("/recipes/%d/nutrition", recipe.ID), nil)
+	
+	// Adicionar parâmetro de rota através do chi context
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", fmt.Sprintf("%d", recipe.ID))
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	
 	rec := httptest.NewRecorder()
 
 	handlers.GetRecipeNutrition(rec, req)
@@ -275,7 +263,7 @@ func TestCalculateRecipeNutrition(t *testing.T) {
 }
 
 func TestGetCategories(t *testing.T) {
-	setupIngredientTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar ingredientes de diferentes categorias
 	ingredients := []models.Ingredient{
@@ -308,7 +296,7 @@ func TestGetCategories(t *testing.T) {
 }
 
 func TestSearchIngredientsByName(t *testing.T) {
-	setupIngredientTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar ingredientes para testar busca
 	ingredients := []models.Ingredient{
@@ -357,7 +345,7 @@ func TestSearchIngredientsByName(t *testing.T) {
 }
 
 func TestSearchIngredientsByCategory(t *testing.T) {
-	setupIngredientTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar ingredientes
 	ingredients := []models.Ingredient{
@@ -393,7 +381,7 @@ func TestSearchIngredientsByCategory(t *testing.T) {
 }
 
 func TestSearchIngredientsCaseInsensitive(t *testing.T) {
-	setupIngredientTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar ingrediente
 	ingredient := models.Ingredient{
@@ -426,7 +414,7 @@ func TestSearchIngredientsCaseInsensitive(t *testing.T) {
 }
 
 func TestSearchWithCategoryFilter(t *testing.T) {
-	setupIngredientTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar ingredientes
 	ingredients := []models.Ingredient{

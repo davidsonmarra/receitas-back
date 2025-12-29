@@ -1,12 +1,16 @@
 package test
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
 	"github.com/davidsonmarra/receitas-app/internal/http/routes"
+	"github.com/davidsonmarra/receitas-app/pkg/auth"
+	"github.com/davidsonmarra/receitas-app/test/testdb"
 )
 
 func TestRateLimitGlobal(t *testing.T) {
@@ -59,6 +63,15 @@ func TestRateLimitGlobal(t *testing.T) {
 // O rate limiting por endpoint é testado adequadamente em TestRateLimitSeparateEndpoints
 
 func TestRateLimitEndpointWrite(t *testing.T) {
+	testdb.SetupWithCleanup(t)
+	
+	// Criar usuário e gerar token para autenticação
+	user := testdb.SeedUser(t, "Rate Limit User", "ratelimit@test.com", "hashed_password", "user")
+	token, err := auth.GenerateToken(user.ID, user.Email, user.Role)
+	if err != nil {
+		t.Fatalf("erro ao gerar token: %v", err)
+	}
+	
 	// Configurar rate limits para teste
 	os.Setenv("RATE_LIMIT_ENABLED", "true")
 	os.Setenv("RATE_LIMIT_GLOBAL", "100")
@@ -71,20 +84,38 @@ func TestRateLimitEndpointWrite(t *testing.T) {
 
 	// Fazer 2 requisições POST /recipes (dentro do limite)
 	for i := 0; i < 2; i++ {
-		req := httptest.NewRequest(http.MethodPost, "/recipes", nil)
+		payload := map[string]interface{}{
+			"title":     "Recipe Test",
+			"prep_time": 30,
+			"servings":  4,
+		}
+		body, _ := json.Marshal(payload)
+		
+		req := httptest.NewRequest(http.MethodPost, "/recipes", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
 		req.RemoteAddr = "192.168.1.3:12345"
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
 
-		// Pode retornar 400 (validação) mas não 429
+		// Pode retornar 201 (created) ou 400 (validação) mas não 429
 		if w.Code == http.StatusTooManyRequests {
 			t.Errorf("Requisição %d não deveria ser bloqueada por rate limit", i+1)
 		}
 	}
 
 	// 3ª requisição deve ser bloqueada
-	req := httptest.NewRequest(http.MethodPost, "/recipes", nil)
+	payload := map[string]interface{}{
+		"title":     "Recipe Test 3",
+		"prep_time": 30,
+		"servings":  4,
+	}
+	body, _ := json.Marshal(payload)
+	
+	req := httptest.NewRequest(http.MethodPost, "/recipes", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.RemoteAddr = "192.168.1.3:12345"
 	w := httptest.NewRecorder()
 
@@ -279,12 +310,12 @@ func TestRateLimitResponseFormat(t *testing.T) {
 // O rate limiting é testado adequadamente nos outros testes usando /test
 
 // Helper function para verificar se uma string contém outra (case insensitive)
-func contains(s, substr string) bool {
+func containsRateLimit(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && len(substr) > 0 && containsHelper(s, substr)))
+		(len(s) > 0 && len(substr) > 0 && containsHelperRateLimit(s, substr)))
 }
 
-func containsHelper(s, substr string) bool {
+func containsHelperRateLimit(s, substr string) bool {
 	for i := 0; i <= len(s)-len(substr); i++ {
 		if s[i:i+len(substr)] == substr {
 			return true

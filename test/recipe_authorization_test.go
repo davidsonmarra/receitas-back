@@ -12,26 +12,11 @@ import (
 	"github.com/davidsonmarra/receitas-app/internal/models"
 	"github.com/davidsonmarra/receitas-app/pkg/auth"
 	"github.com/davidsonmarra/receitas-app/pkg/database"
+	"github.com/davidsonmarra/receitas-app/test/testdb"
 )
 
-// setupAuthTestDB inicializa database para testes de autorização
-func setupAuthTestDB(t *testing.T) {
-	if database.DB == nil {
-		t.Skip("DATABASE_URL não configurado para testes")
-	}
-
-	// Limpar tabelas
-	database.DB.Exec("DELETE FROM recipes")
-	database.DB.Exec("DELETE FROM users")
-
-	// Executar migrations
-	if err := database.DB.AutoMigrate(&models.User{}, &models.Recipe{}); err != nil {
-		t.Fatalf("erro ao executar migrations: %v", err)
-	}
-}
-
 func TestCreateRecipe_WithoutAuth(t *testing.T) {
-	setupAuthTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	payload := map[string]interface{}{
 		"title":     "Receita Teste",
@@ -55,7 +40,7 @@ func TestCreateRecipe_WithoutAuth(t *testing.T) {
 }
 
 func TestCreateRecipe_WithAuth(t *testing.T) {
-	setupAuthTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar usuário
 	hashedPassword, _ := auth.HashPassword("senha123")
@@ -68,7 +53,7 @@ func TestCreateRecipe_WithAuth(t *testing.T) {
 	database.DB.Create(&user)
 
 	// Gerar token
-	token, _ := auth.GenerateToken(user.ID, user.Email)
+	token, _ := auth.GenerateToken(user.ID, user.Email, user.Role)
 
 	payload := map[string]interface{}{
 		"title":     "Receita Teste",
@@ -103,7 +88,7 @@ func TestCreateRecipe_WithAuth(t *testing.T) {
 }
 
 func TestUpdateRecipe_OwnRecipe(t *testing.T) {
-	setupAuthTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar usuário
 	hashedPassword, _ := auth.HashPassword("senha123")
@@ -125,7 +110,7 @@ func TestUpdateRecipe_OwnRecipe(t *testing.T) {
 	database.DB.Create(&recipe)
 
 	// Gerar token
-	token, _ := auth.GenerateToken(user.ID, user.Email)
+	token, _ := auth.GenerateToken(user.ID, user.Email, user.Role)
 
 	// Tentar atualizar
 	payload := map[string]interface{}{
@@ -133,7 +118,7 @@ func TestUpdateRecipe_OwnRecipe(t *testing.T) {
 	}
 
 	body, _ := json.Marshal(payload)
-	req := httptest.NewRequest("PUT", "/recipes/"+string(rune(recipe.ID)), bytes.NewReader(body))
+	req := httptest.NewRequest("PUT", "/recipes/1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
@@ -155,7 +140,7 @@ func TestUpdateRecipe_OwnRecipe(t *testing.T) {
 }
 
 func TestUpdateRecipe_OthersRecipe(t *testing.T) {
-	setupAuthTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar primeiro usuário (dono da receita)
 	hashedPassword, _ := auth.HashPassword("senha123")
@@ -186,7 +171,7 @@ func TestUpdateRecipe_OthersRecipe(t *testing.T) {
 	database.DB.Create(&otherUser)
 
 	// Gerar token do segundo usuário
-	token, _ := auth.GenerateToken(otherUser.ID, otherUser.Email)
+	token, _ := auth.GenerateToken(otherUser.ID, otherUser.Email, otherUser.Role)
 
 	// Tentar atualizar receita de outro usuário
 	payload := map[string]interface{}{
@@ -209,7 +194,7 @@ func TestUpdateRecipe_OthersRecipe(t *testing.T) {
 }
 
 func TestDeleteRecipe_OwnRecipe(t *testing.T) {
-	setupAuthTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar usuário
 	hashedPassword, _ := auth.HashPassword("senha123")
@@ -231,7 +216,7 @@ func TestDeleteRecipe_OwnRecipe(t *testing.T) {
 	database.DB.Create(&recipe)
 
 	// Gerar token
-	token, _ := auth.GenerateToken(user.ID, user.Email)
+	token, _ := auth.GenerateToken(user.ID, user.Email, user.Role)
 
 	req := httptest.NewRequest("DELETE", "/recipes/1", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -247,7 +232,7 @@ func TestDeleteRecipe_OwnRecipe(t *testing.T) {
 }
 
 func TestDeleteRecipe_OthersRecipe(t *testing.T) {
-	setupAuthTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar primeiro usuário (dono)
 	hashedPassword, _ := auth.HashPassword("senha123")
@@ -278,7 +263,7 @@ func TestDeleteRecipe_OthersRecipe(t *testing.T) {
 	database.DB.Create(&otherUser)
 
 	// Token do segundo usuário
-	token, _ := auth.GenerateToken(otherUser.ID, otherUser.Email)
+	token, _ := auth.GenerateToken(otherUser.ID, otherUser.Email, otherUser.Role)
 
 	req := httptest.NewRequest("DELETE", "/recipes/1", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -294,7 +279,7 @@ func TestDeleteRecipe_OthersRecipe(t *testing.T) {
 }
 
 func TestUpdateRecipe_GeneralRecipe_NonAdmin(t *testing.T) {
-	setupAuthTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	// Criar receita geral (sem dono)
 	recipe := models.Recipe{
@@ -316,7 +301,7 @@ func TestUpdateRecipe_GeneralRecipe_NonAdmin(t *testing.T) {
 	database.DB.Create(&user)
 
 	// Gerar token
-	token, _ := auth.GenerateToken(user.ID, user.Email)
+	token, _ := auth.GenerateToken(user.ID, user.Email, user.Role)
 
 	// Tentar atualizar receita geral
 	payload := map[string]interface{}{

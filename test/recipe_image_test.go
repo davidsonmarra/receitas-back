@@ -4,28 +4,35 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/davidsonmarra/receitas-app/internal/http/handlers"
 	"github.com/davidsonmarra/receitas-app/internal/http/middleware"
 	"github.com/davidsonmarra/receitas-app/internal/models"
 	"github.com/davidsonmarra/receitas-app/pkg/database"
+	"github.com/davidsonmarra/receitas-app/pkg/storage"
+	"github.com/davidsonmarra/receitas-app/test/testdb"
 	"github.com/go-chi/chi/v5"
 )
 
 // setupTestRecipe cria uma receita de teste no banco
 func setupTestRecipe(userID uint) (*models.Recipe, error) {
+	var recipeUserID *uint
+	if userID > 0 {
+		recipeUserID = &userID
+	}
+	
 	recipe := &models.Recipe{
 		Title:       "Receita Teste",
 		Description: "Descrição teste",
 		PrepTime:    30,
 		Servings:    4,
 		Difficulty:  "fácil",
-		UserID:      userID,
+		UserID:      recipeUserID,
 	}
 
 	if err := database.DB.Create(recipe).Error; err != nil {
@@ -63,31 +70,21 @@ func TestUploadRecipeImage_MissingAuth(t *testing.T) {
 }
 
 func TestUploadRecipeImage_MissingFile(t *testing.T) {
-	if database.DB == nil {
-		t.Skip("Database não configurado - pulando teste de integração")
-	}
+	testdb.SetupWithCleanup(t)
 
 	// Criar usuário e receita de teste
-	user := &models.User{
-		Name:     "Test User",
-		Email:    "test@example.com",
-		Password: "hashed_password",
-	}
-	database.DB.Create(user)
-	defer database.DB.Delete(user)
-
+	user := testdb.SeedUser(t, "Test User", "test@example.com", "hashed_password", "user")
 	recipe, err := setupTestRecipe(user.ID)
 	if err != nil {
 		t.Fatalf("erro ao criar receita de teste: %v", err)
 	}
-	defer cleanupTestRecipe(recipe.ID)
 
 	// Criar request sem arquivo
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	writer.Close()
 
-	req, err := http.NewRequest("POST", "/recipes/"+string(rune(recipe.ID))+"/image", body)
+	req, err := http.NewRequest("POST", fmt.Sprintf("/recipes/%d/image", recipe.ID), body)
 	if err != nil {
 		t.Fatalf("erro ao criar requisição: %v", err)
 	}
@@ -99,7 +96,7 @@ func TestUploadRecipeImage_MissingFile(t *testing.T) {
 
 	// Adicionar parâmetro de rota
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", string(rune(recipe.ID)))
+	rctx.URLParams.Add("id", fmt.Sprintf("%d", recipe.ID))
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	rr := httptest.NewRecorder()
@@ -113,18 +110,10 @@ func TestUploadRecipeImage_MissingFile(t *testing.T) {
 }
 
 func TestUploadRecipeImage_RecipeNotFound(t *testing.T) {
-	if database.DB == nil {
-		t.Skip("Database não configurado - pulando teste de integração")
-	}
+	testdb.SetupWithCleanup(t)
 
 	// Criar usuário de teste
-	user := &models.User{
-		Name:     "Test User",
-		Email:    "test2@example.com",
-		Password: "hashed_password",
-	}
-	database.DB.Create(user)
-	defer database.DB.Delete(user)
+	user := testdb.SeedUser(t, "Test User", "test2@example.com", "hashed_password", "user")
 
 	// Criar request com ID de receita inexistente
 	body := &bytes.Buffer{}
@@ -177,18 +166,10 @@ func TestDeleteRecipeImage_MissingAuth(t *testing.T) {
 }
 
 func TestDeleteRecipeImage_RecipeNotFound(t *testing.T) {
-	if database.DB == nil {
-		t.Skip("Database não configurado - pulando teste de integração")
-	}
+	testdb.SetupWithCleanup(t)
 
 	// Criar usuário de teste
-	user := &models.User{
-		Name:     "Test User",
-		Email:    "test3@example.com",
-		Password: "hashed_password",
-	}
-	database.DB.Create(user)
-	defer database.DB.Delete(user)
+	user := testdb.SeedUser(t, "Test User", "test3@example.com", "hashed_password", "user")
 
 	req, err := http.NewRequest("DELETE", "/recipes/99999/image", nil)
 	if err != nil {
@@ -215,9 +196,7 @@ func TestDeleteRecipeImage_RecipeNotFound(t *testing.T) {
 }
 
 func TestGetRecipeImageVariants_RecipeNotFound(t *testing.T) {
-	if database.DB == nil {
-		t.Skip("Database não configurado - pulando teste de integração")
-	}
+	testdb.SetupWithCleanup(t)
 
 	req, err := http.NewRequest("GET", "/recipes/99999/image/variants", nil)
 	if err != nil {
@@ -240,33 +219,24 @@ func TestGetRecipeImageVariants_RecipeNotFound(t *testing.T) {
 }
 
 func TestGetRecipeImageVariants_NoImage(t *testing.T) {
-	if database.DB == nil {
-		t.Skip("Database não configurado - pulando teste de integração")
-	}
+	testdb.SetupWithCleanup(t)
 
 	// Criar usuário e receita sem imagem
-	user := &models.User{
-		Name:     "Test User",
-		Email:    "test4@example.com",
-		Password: "hashed_password",
-	}
-	database.DB.Create(user)
-	defer database.DB.Delete(user)
+	user := testdb.SeedUser(t, "Test User", "test4@example.com", "hashed_password", "user")
 
 	recipe, err := setupTestRecipe(user.ID)
 	if err != nil {
 		t.Fatalf("erro ao criar receita de teste: %v", err)
 	}
-	defer cleanupTestRecipe(recipe.ID)
 
-	req, err := http.NewRequest("GET", "/recipes/"+string(rune(recipe.ID))+"/image/variants", nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("/recipes/%d/image/variants", recipe.ID), nil)
 	if err != nil {
 		t.Fatalf("erro ao criar requisição: %v", err)
 	}
 
 	// Adicionar parâmetro de rota
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", string(rune(recipe.ID)))
+	rctx.URLParams.Add("id", fmt.Sprintf("%d", recipe.ID))
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	rr := httptest.NewRecorder()
@@ -280,41 +250,38 @@ func TestGetRecipeImageVariants_NoImage(t *testing.T) {
 }
 
 func TestGetOptimizedRecipeImage_WithQueryParams(t *testing.T) {
-	if database.DB == nil {
-		t.Skip("Database não configurado - pulando teste de integração")
-	}
-	if os.Getenv("CLOUDINARY_URL") == "" {
-		t.Skip("CLOUDINARY_URL não configurada - pulando teste de integração")
+	testdb.SetupWithCleanup(t)
+
+	// Substituir o ServiceFactory por um mock
+	originalFactory := storage.ServiceFactory
+	defer func() { storage.ServiceFactory = originalFactory }()
+	
+	mockService := testdb.NewMockCloudinaryService()
+	storage.ServiceFactory = func() (storage.ImageService, error) {
+		return mockService, nil
 	}
 
 	// Criar usuário e receita com imagem
-	user := &models.User{
-		Name:     "Test User",
-		Email:    "test5@example.com",
-		Password: "hashed_password",
-	}
-	database.DB.Create(user)
-	defer database.DB.Delete(user)
+	user := testdb.SeedUser(t, "Test User", "test5@example.com", "hashed_password", "user")
 
 	recipe, err := setupTestRecipe(user.ID)
 	if err != nil {
 		t.Fatalf("erro ao criar receita de teste: %v", err)
 	}
-	defer cleanupTestRecipe(recipe.ID)
 
 	// Adicionar imagem fake à receita
 	recipe.ImagePublicID = "test/recipe_123"
 	recipe.ImageURL = "https://res.cloudinary.com/test/image/upload/test/recipe_123"
 	database.DB.Save(recipe)
 
-	req, err := http.NewRequest("GET", "/recipes/"+string(rune(recipe.ID))+"/image/optimized?width=500&height=500&quality=80", nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("/recipes/%d/image/optimized?width=500&height=500&quality=80", recipe.ID), nil)
 	if err != nil {
 		t.Fatalf("erro ao criar requisição: %v", err)
 	}
 
 	// Adicionar parâmetro de rota
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", string(rune(recipe.ID)))
+	rctx.URLParams.Add("id", fmt.Sprintf("%d", recipe.ID))
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	rr := httptest.NewRecorder()

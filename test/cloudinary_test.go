@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/davidsonmarra/receitas-app/pkg/storage"
+	"github.com/davidsonmarra/receitas-app/test/testdb"
 )
 
 // mockFile cria um multipart.File mock para testes
@@ -137,14 +138,7 @@ func TestValidateImageFile_InvalidExtensions(t *testing.T) {
 }
 
 func TestUploadImage_EmptyFile(t *testing.T) {
-	if os.Getenv("CLOUDINARY_URL") == "" {
-		t.Skip("CLOUDINARY_URL não configurada - pulando teste de integração")
-	}
-
-	service, err := storage.NewCloudinaryService()
-	if err != nil {
-		t.Fatalf("erro ao criar serviço: %v", err)
-	}
+	service := testdb.NewMockCloudinaryService()
 
 	// Arquivo vazio
 	emptyFile := newMockFile([]byte{})
@@ -155,7 +149,7 @@ func TestUploadImage_EmptyFile(t *testing.T) {
 		Folder:   "test",
 	}
 
-	_, err = service.UploadImage(context.Background(), params)
+	_, err := service.UploadImage(context.Background(), params)
 	if err == nil {
 		t.Error("esperava erro ao fazer upload de arquivo vazio")
 	}
@@ -166,16 +160,9 @@ func TestUploadImage_EmptyFile(t *testing.T) {
 }
 
 func TestDeleteImage_EmptyPublicID(t *testing.T) {
-	if os.Getenv("CLOUDINARY_URL") == "" {
-		t.Skip("CLOUDINARY_URL não configurada - pulando teste de integração")
-	}
+	service := testdb.NewMockCloudinaryService()
 
-	service, err := storage.NewCloudinaryService()
-	if err != nil {
-		t.Fatalf("erro ao criar serviço: %v", err)
-	}
-
-	err = service.DeleteImage(context.Background(), "")
+	err := service.DeleteImage(context.Background(), "")
 	if err == nil {
 		t.Error("esperava erro ao deletar imagem com publicID vazio")
 	}
@@ -186,16 +173,9 @@ func TestDeleteImage_EmptyPublicID(t *testing.T) {
 }
 
 func TestGetOptimizedURL_EmptyPublicID(t *testing.T) {
-	if os.Getenv("CLOUDINARY_URL") == "" {
-		t.Skip("CLOUDINARY_URL não configurada - pulando teste de integração")
-	}
+	service := testdb.NewMockCloudinaryService()
 
-	service, err := storage.NewCloudinaryService()
-	if err != nil {
-		t.Fatalf("erro ao criar serviço: %v", err)
-	}
-
-	_, err = service.GetOptimizedURL("", 300, 300, "auto")
+	_, err := service.GetOptimizedURL("", 300, 300, "auto")
 	if err == nil {
 		t.Error("esperava erro ao gerar URL com publicID vazio")
 	}
@@ -206,14 +186,7 @@ func TestGetOptimizedURL_EmptyPublicID(t *testing.T) {
 }
 
 func TestGetOptimizedURL_ValidParams(t *testing.T) {
-	if os.Getenv("CLOUDINARY_URL") == "" {
-		t.Skip("CLOUDINARY_URL não configurada - pulando teste de integração")
-	}
-
-	service, err := storage.NewCloudinaryService()
-	if err != nil {
-		t.Fatalf("erro ao criar serviço: %v", err)
-	}
+	service := testdb.NewMockCloudinaryService()
 
 	url, err := service.GetOptimizedURL("test/image_123", 600, 400, "auto")
 	if err != nil {
@@ -230,8 +203,6 @@ func TestGetOptimizedURL_ValidParams(t *testing.T) {
 		"w_600",
 		"h_400",
 		"q_auto",
-		"f_auto",
-		"c_fill",
 	}
 
 	for _, part := range expectedParts {

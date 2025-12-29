@@ -16,6 +16,20 @@ import (
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 )
 
+// ImageService interface para serviços de imagem (permite mocking)
+type ImageService interface {
+	UploadImage(ctx context.Context, params UploadImageParams) (*UploadResult, error)
+	DeleteImage(ctx context.Context, publicID string) error
+	GetOptimizedURL(publicID string, width, height int, quality string) (string, error)
+	GetImageVariants(publicID string) map[string]string
+}
+
+// ServiceFactory é uma função que cria um ImageService
+// Pode ser substituída nos testes para retornar um mock
+var ServiceFactory func() (ImageService, error) = func() (ImageService, error) {
+	return NewCloudinaryService()
+}
+
 // CloudinaryService gerencia upload de imagens para o Cloudinary
 type CloudinaryService struct {
 	cld *cloudinary.Cloudinary
@@ -194,6 +208,33 @@ func (s *CloudinaryService) GetOptimizedURL(publicID string, width, height int, 
 	)
 
 	return url, nil
+}
+
+// GetImageVariants retorna URLs otimizadas em diferentes tamanhos
+func (s *CloudinaryService) GetImageVariants(publicID string) map[string]string {
+	if publicID == "" {
+		return map[string]string{}
+	}
+
+	cloudName := s.cld.Config.Cloud.CloudName
+	variants := make(map[string]string)
+
+	// Thumbnail (pequeno para listagem)
+	variants["thumbnail"] = fmt.Sprintf("https://res.cloudinary.com/%s/image/upload/w_150,h_150,c_fill,q_auto,f_auto/%s", cloudName, publicID)
+	
+	// Small
+	variants["small"] = fmt.Sprintf("https://res.cloudinary.com/%s/image/upload/w_400,h_400,c_fit,q_auto,f_auto/%s", cloudName, publicID)
+	
+	// Medium
+	variants["medium"] = fmt.Sprintf("https://res.cloudinary.com/%s/image/upload/w_800,h_800,c_fit,q_auto,f_auto/%s", cloudName, publicID)
+	
+	// Large
+	variants["large"] = fmt.Sprintf("https://res.cloudinary.com/%s/image/upload/w_1200,h_1200,c_fit,q_auto,f_auto/%s", cloudName, publicID)
+	
+	// Original
+	variants["original"] = fmt.Sprintf("https://res.cloudinary.com/%s/image/upload/%s", cloudName, publicID)
+
+	return variants
 }
 
 // buildTransformation constrói string de transformação para Cloudinary
