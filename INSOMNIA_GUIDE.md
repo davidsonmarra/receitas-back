@@ -432,6 +432,99 @@ Para compartilhar configurações:
 4. Verificar rate limits
 ```
 
+## 🤖 9. Food Analysis (IA)
+
+Análise de alimentos em imagens usando Google Gemini 3 Flash.
+
+### POST /analyze-food
+
+Envia foto de um prato para análise.
+
+**Headers:**
+
+- Authorization: Bearer {{auth_token}}
+
+**Body:** multipart/form-data
+
+- Campo: `image` (file)
+- Arquivo: foto do prato (.jpg, .png, etc)
+
+**Response** (202 Accepted):
+
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "processing",
+  "check_url": "/analyze-food/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Script pós-resposta** (salvar job_id):
+
+```javascript
+const response = JSON.parse(pm.response.body());
+pm.environment.set("food_job_id", response.job_id);
+```
+
+### GET /analyze-food/{job_id}
+
+Consulta status e resultado da análise.
+
+**Headers:**
+
+- Authorization: Bearer {{auth_token}}
+
+**Path Params:**
+
+- job_id: {{food_job_id}}
+
+**Response - Processing:**
+
+```json
+{
+  "job_id": "abc-123",
+  "status": "processing",
+  "created_at": "2025-12-29T10:00:00Z"
+}
+```
+
+**Response - Completed:**
+
+```json
+{
+  "job_id": "abc-123",
+  "status": "completed",
+  "result": {
+    "detected_foods": [
+      {
+        "name": "arroz branco",
+        "confidence": 0.95,
+        "quantity": 150,
+        "calories": 195,
+        "protein": 3.5,
+        "carbs": 43.2,
+        "fat": 0.3
+      }
+    ],
+    "total_nutrition": {
+      "calories": 272,
+      "protein": 8.0,
+      "carbs": 57.2,
+      "fat": 0.8
+    }
+  }
+}
+```
+
+**Workflow:**
+
+1. POST /analyze-food (envia imagem)
+2. Copiar job_id da resposta (ou usar script)
+3. GET /analyze-food/{job_id} (consultar a cada 2s)
+4. Quando status = "completed", ver resultado
+
+**Nota:** Configure `GEMINI_API_KEY` no backend para usar esta feature (gratuito em https://makersuite.google.com/app/apikey).
+
 ---
 
 **Dúvidas?** Consulte a [documentação completa](README.md) ou abra uma issue no projeto.

@@ -18,6 +18,7 @@
       "data": {
         "auth_token": "",
         "admin_token": "",
+        "food_job_id": "",
         "user_email": "user@example.com",
         "user_password": "senha123",
         "admin_email": "admin@receitas.com",
@@ -1087,9 +1088,82 @@
       "parentId": "fld_admin_ingredients"
     },
     {
+      "_id": "fld_food_analysis",
+      "_type": "request_group",
+      "name": "9. Food Analysis (IA)",
+      "description": "Análise de alimentos com Google Gemini 3 Flash - Reconhecimento automático e cálculo nutricional",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 9,
+      "parentId": "wrk_receitas_app"
+    },
+    {
+      "_id": "req_analyze_food",
+      "_type": "request",
+      "name": "Analyze Food (Upload Image)",
+      "url": "{{ _.base_url }}/analyze-food",
+      "method": "POST",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "image",
+            "value": "",
+            "description": "Selecione uma foto do prato de comida (JPG, PNG, etc - máx 5MB)",
+            "type": "file"
+          }
+        ]
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Envia foto de um prato para análise com IA. Retorna job_id para consulta posterior (processamento assíncrono).",
+      "parentId": "fld_food_analysis",
+      "afterResponseScript": "const response = await insomnia.response.json();\nif (response && response.job_id) {\n  await insomnia.environment.set('food_job_id', response.job_id);\n  console.log('✅ Job ID salvo em food_job_id:', response.job_id);\n  console.log('📊 Status:', response.status);\n  console.log('🔍 Consulte o status em: GET /analyze-food/' + response.job_id);\n} else {\n  console.log('❌ Erro: job_id não encontrado na resposta');\n}"
+    },
+    {
+      "_id": "req_get_food_analysis",
+      "_type": "request",
+      "name": "Get Analysis Result (Check Status)",
+      "url": "{{ _.base_url }}/analyze-food/{{ _.food_job_id }}",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Consulta o status e resultado da análise. Execute a cada 2s até status = 'completed' ou 'failed'.",
+      "parentId": "fld_food_analysis"
+    },
+    {
       "_id": "fld_rate_limit",
       "_type": "request_group",
-      "name": "9. Rate Limit Tests",
+      "name": "10. Rate Limit Tests",
       "description": "Testes de rate limiting - Execute múltiplas vezes para testar limites",
       "environment": {},
       "environmentPropertyOrder": null,

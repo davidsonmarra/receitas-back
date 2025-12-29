@@ -1,8 +1,11 @@
 package testdb
 
 import (
+	"context"
+	"net/http"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -149,5 +152,12 @@ func CleanTable(t *testing.T, tableName string) {
 	if err := database.DB.Exec("DELETE FROM " + tableName).Error; err != nil {
 		t.Fatalf("falha ao limpar tabela %s: %v", tableName, err)
 	}
+}
+
+// AddChiURLParam adiciona um parâmetro de URL do chi ao contexto
+func AddChiURLParam(req *http.Request, key, value string) context.Context {
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add(key, value)
+	return context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
 }
 

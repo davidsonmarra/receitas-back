@@ -103,6 +103,15 @@ func Setup() *chi.Mux {
 	// Rota de cálculo nutricional
 	r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/recipes/{id}/nutrition", handlers.GetRecipeNutrition)
 
+	// Rotas de análise de alimentos com IA
+	// POST /analyze-food - Iniciar análise de alimento
+	r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).
+		Post("/analyze-food", handlers.AnalyzeFood)
+
+	// GET /analyze-food/{job_id} - Consultar status/resultado
+	r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitRead(rateLimitConfig)).
+		Get("/analyze-food/{job_id}", handlers.GetAnalysisResult)
+
 	// Rotas administrativas (requer admin)
 	r.Route("/admin", func(r chi.Router) {
 		// Middleware: RequireAuth + RequireAdmin (defense in depth)

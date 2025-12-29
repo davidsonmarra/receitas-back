@@ -1258,6 +1258,210 @@ go run ./cmd/seed-ingredients ~/Downloads/alimentos.csv
 
 Os ingredientes incluem informações nutricionais completas (calorias, proteínas, carboidratos, gorduras, fibras) por 100g de alimento.
 
+## 🤖 Análise de Alimentos com IA
+
+A API oferece reconhecimento automático de alimentos em imagens usando **Google Gemini 3 Flash** (gratuito), com cálculo de calorias baseado na tabela TACO de ingredientes.
+
+### Como Funciona
+
+O sistema funciona de forma **assíncrona** para não bloquear o cliente:
+
+1. Cliente envia foto do prato → recebe `job_id` imediatamente (< 100ms)
+2. Backend processa imagem com Gemini Vision em background (3-10s)
+3. Cliente consulta status a cada 2 segundos via polling
+4. Quando completado, retorna alimentos detectados e valores nutricionais
+
+### Configurar API Key
+
+Obtenha sua chave gratuita em: https://makersuite.google.com/app/apikey
+
+```bash
+# Local
+export GEMINI_API_KEY="sua-chave-aqui"
+
+# Railway
+railway variables set GEMINI_API_KEY="AIza..."
+```
+
+### Endpoints
+
+#### POST /analyze-food
+
+Envia imagem para análise (requer autenticação).
+
+**Request**:
+```bash
+curl -X POST http://localhost:8080/analyze-food \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "image=@prato.jpg"
+```
+
+**Response** (202 Accepted):
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "processing",
+  "check_url": "/analyze-food/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+#### GET /analyze-food/{job_id}
+
+Consulta status e resultado da análise (requer autenticação).
+
+**Response - Processing** (200 OK):
+```json
+{
+  "job_id": "abc-123",
+  "status": "processing",
+  "created_at": "2025-12-29T10:00:00Z"
+}
+```
+
+**Response - Completed** (200 OK):
+```json
+{
+  "job_id": "abc-123",
+  "status": "completed",
+  "created_at": "2025-12-29T10:00:00Z",
+  "result": {
+    "detected_foods": [
+      {
+        "name": "arroz branco",
+        "confidence": 0.95,
+        "quantity": 150,
+        "unit": "g",
+        "calories": 195,
+        "protein": 3.5,
+        "carbs": 43.2,
+        "fat": 0.3,
+        "found_in_db": true
+      },
+      {
+        "name": "feijão preto",
+        "confidence": 0.88,
+        "quantity": 100,
+        "unit": "g",
+        "calories": 77,
+        "protein": 4.5,
+        "carbs": 14.0,
+        "fat": 0.5,
+        "found_in_db": true
+      }
+    ],
+    "total_nutrition": {
+      "calories": 272,
+      "protein": 8.0,
+      "carbs": 57.2,
+      "fat": 0.8
+    }
+  }
+}
+```
+
+**Response - Failed** (200 OK):
+```json
+{
+  "job_id": "abc-123",
+  "status": "failed",
+  "created_at": "2025-12-29T10:00:00Z",
+  "error": "Erro ao analisar imagem com Gemini"
+}
+```
+
+### Exemplo Completo (curl)
+
+```bash
+# 1. Fazer login
+TOKEN=$(curl -s -X POST http://localhost:8080/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"senha123"}' \
+  | jq -r '.token')
+
+# 2. Enviar imagem
+RESPONSE=$(curl -s -X POST http://localhost:8080/analyze-food \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "image=@prato.jpg")
+
+JOB_ID=$(echo $RESPONSE | jq -r '.job_id')
+echo "Job ID: $JOB_ID"
+
+# 3. Consultar status (polling)
+while true; do
+  RESULT=$(curl -s http://localhost:8080/analyze-food/$JOB_ID \
+    -H "Authorization: Bearer $TOKEN")
+  
+  STATUS=$(echo $RESULT | jq -r '.status')
+  
+  if [ "$STATUS" != "processing" ]; then
+    echo "Resultado:"
+    echo $RESULT | jq
+    break
+  fi
+  
+  echo "Processando..."
+  sleep 2
+done
+```
+
+### Uso no React Native
+
+```javascript
+// 1. Enviar imagem
+const formData = new FormData();
+formData.append('image', {
+  uri: photoUri,
+  type: 'image/jpeg',
+  name: 'food.jpg'
+});
+
+const response = await fetch(`${API_URL}/analyze-food`, {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${token}` },
+  body: formData
+});
+
+const { job_id } = await response.json();
+
+// 2. Polling (verificar a cada 2s)
+const pollResult = async () => {
+  const result = await fetch(`${API_URL}/analyze-food/${job_id}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  
+  const data = await result.json();
+  
+  if (data.status === 'processing') {
+    setTimeout(pollResult, 2000); // Verificar novamente em 2s
+  } else if (data.status === 'completed') {
+    showResult(data.result); // Exibir resultado
+  } else {
+    showError(data.error); // Exibir erro
+  }
+};
+
+pollResult();
+```
+
+### Limites Gratuitos
+
+O Google Gemini oferece tier gratuito extremamente generoso:
+
+- **15 requests/minuto**
+- **1.500 requests/dia** (45.000/mês!)
+- **1.000.000 tokens/mês**
+- **100% GRÁTIS** (sem cartão de crédito)
+
+### Vantagens
+
+✅ **Custo ZERO** - até 1.500 análises por dia  
+✅ **Assíncrono** - cliente não fica bloqueado  
+✅ **Preciso** - Gemini Vision é IA de ponta do Google  
+✅ **Estimativa de porções** - calcula quantidade em gramas  
+✅ **Integração TACO** - usa banco de ingredientes brasileiros  
+✅ **Valores nutricionais** - calorias, proteínas, carbs, gorduras  
+✅ **Job Queue** - gerenciamento automático com limpeza
+
 ## 🔌 Endpoints
 
 ### GET /health
