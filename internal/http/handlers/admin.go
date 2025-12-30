@@ -77,6 +77,9 @@ func AdminUpdateRecipe(w http.ResponseWriter, r *http.Request) {
 	if updateReq.Description != nil {
 		recipe.Description = *updateReq.Description
 	}
+	if updateReq.Instructions != nil {
+		recipe.Instructions = *updateReq.Instructions
+	}
 	if updateReq.PrepTime != nil {
 		recipe.PrepTime = *updateReq.PrepTime
 	}

@@ -1508,6 +1508,7 @@ Lista todas as receitas cadastradas (gerais e personalizadas).
       "id": 1,
       "title": "Bolo de Chocolate",
       "description": "Delicioso bolo de chocolate",
+      "instructions": "## Modo de Preparo\n\n1. **Pré-aqueça** o forno a 180°C\n2. Misture os ingredientes secos\n3. Adicione os líquidos\n4. Asse por 45 minutos",
       "prep_time": 45,
       "servings": 8,
       "difficulty": "média",
@@ -1537,11 +1538,14 @@ Cria uma nova receita.
 {
   "title": "Bolo de Chocolate",
   "description": "Delicioso bolo de chocolate",
+  "instructions": "## Modo de Preparo\n\n1. **Pré-aqueça** o forno a 180°C\n2. Em uma tigela, misture os ingredientes secos\n3. Adicione os ingredientes líquidos e misture bem\n4. Despeje em forma untada\n5. Asse por 45 minutos ou até dourar\n\n*Dica:* Verifique com um palito antes de retirar do forno.",
   "prep_time": 45,
   "servings": 8,
   "difficulty": "média"
 }
 ```
+
+**Nota**: O campo `instructions` é opcional e suporta formatação Markdown.
 
 **Response**: 201 Created
 
@@ -1571,17 +1575,18 @@ O projeto utiliza **PostgreSQL** com **GORM** para persistência de dados.
 
 #### Receita (Recipe)
 
-| Campo         | Tipo      | Descrição                          |
-| ------------- | --------- | ---------------------------------- |
-| `id`          | uint      | ID único da receita                |
-| `title`       | string    | Título (max 200 caracteres)        |
-| `description` | text      | Descrição detalhada                |
-| `prep_time`   | int       | Tempo de preparo em minutos        |
-| `servings`    | int       | Número de porções                  |
-| `difficulty`  | string    | Dificuldade: fácil, média, difícil |
-| `created_at`  | timestamp | Data de criação                    |
-| `updated_at`  | timestamp | Data de atualização                |
-| `deleted_at`  | timestamp | Data de exclusão (soft delete)     |
+| Campo          | Tipo      | Descrição                                         |
+| -------------- | --------- | ------------------------------------------------- |
+| `id`           | uint      | ID único da receita                               |
+| `title`        | string    | Título (max 200 caracteres)                       |
+| `description`  | text      | Descrição detalhada                               |
+| `instructions` | text      | Modo de preparo em Markdown (opcional, 10-10000)  |
+| `prep_time`    | int       | Tempo de preparo em minutos                       |
+| `servings`     | int       | Número de porções                                 |
+| `difficulty`   | string    | Dificuldade: fácil, média, difícil                |
+| `created_at`   | timestamp | Data de criação                                   |
+| `updated_at`   | timestamp | Data de atualização                               |
+| `deleted_at`   | timestamp | Data de exclusão (soft delete)                    |
 
 ### Configuração Local
 
@@ -1629,6 +1634,7 @@ curl -X POST http://localhost:8080/recipes \
   -d '{
     "title": "Bolo de Chocolate",
     "description": "Delicioso bolo de chocolate com cobertura",
+    "instructions": "## Modo de Preparo\n\n1. **Pré-aqueça** o forno a 180°C\n2. Misture farinha, açúcar e cacau\n3. Adicione ovos, leite e óleo\n4. Despeje em forma untada\n5. Asse por 45 minutos\n\n*Dica:* Teste com palito antes de retirar!",
     "prep_time": 45,
     "servings": 8,
     "difficulty": "média"

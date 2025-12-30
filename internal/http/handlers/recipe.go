@@ -95,11 +95,12 @@ func GetRecipe(w http.ResponseWriter, r *http.Request) {
 
 // UpdateRecipeRequest representa os dados permitidos para atualização
 type UpdateRecipeRequest struct {
-	Title       *string `json:"title" validate:"omitempty,min=3,max=200"`
-	Description *string `json:"description"`
-	PrepTime    *int    `json:"prep_time" validate:"omitempty,min=1"`
-	Servings    *int    `json:"servings" validate:"omitempty,min=1"`
-	Difficulty  *string `json:"difficulty" validate:"omitempty,oneof=fácil média difícil"`
+	Title        *string `json:"title" validate:"omitempty,min=3,max=200"`
+	Description  *string `json:"description"`
+	Instructions *string `json:"instructions" validate:"omitempty,min=10,max=10000"`
+	PrepTime     *int    `json:"prep_time" validate:"omitempty,min=1"`
+	Servings     *int    `json:"servings" validate:"omitempty,min=1"`
+	Difficulty   *string `json:"difficulty" validate:"omitempty,oneof=fácil média difícil"`
 }
 
 // UpdateRecipe atualiza uma receita
@@ -146,6 +147,9 @@ func UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 	}
 	if updateReq.Description != nil {
 		recipe.Description = *updateReq.Description
+	}
+	if updateReq.Instructions != nil {
+		recipe.Instructions = *updateReq.Instructions
 	}
 	if updateReq.PrepTime != nil {
 		recipe.PrepTime = *updateReq.PrepTime
