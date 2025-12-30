@@ -20,8 +20,11 @@ func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
 
 // Error escreve uma resposta de erro em JSON
 func Error(w http.ResponseWriter, statusCode int, message string) {
-	JSON(w, statusCode, map[string]string{
-		"error": message,
+	JSON(w, statusCode, map[string]interface{}{
+		"error": map[string]string{
+			"title":   "Ops, algo deu errado!",
+			"message": message,
+		},
 	})
 }
 
