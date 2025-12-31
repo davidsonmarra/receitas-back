@@ -155,9 +155,17 @@ func CleanTable(t *testing.T, tableName string) {
 }
 
 // AddChiURLParam adiciona um parâmetro de URL do chi ao contexto
+// Preserva o contexto anterior e adiciona/atualiza os parâmetros do Chi
 func AddChiURLParam(req *http.Request, key, value string) context.Context {
-	rctx := chi.NewRouteContext()
+	ctx := req.Context()
+	
+	// Tentar obter RouteContext existente ou criar novo
+	rctx, ok := ctx.Value(chi.RouteCtxKey).(*chi.Context)
+	if !ok {
+		rctx = chi.NewRouteContext()
+	}
+	
 	rctx.URLParams.Add(key, value)
-	return context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	return context.WithValue(ctx, chi.RouteCtxKey, rctx)
 }
 
