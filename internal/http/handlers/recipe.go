@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"gorm.io/gorm"
 
 	"github.com/davidsonmarra/receitas-app/internal/http/middleware"
 	"github.com/davidsonmarra/receitas-app/internal/models"
@@ -85,7 +86,13 @@ func GetRecipe(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	var recipe models.Recipe
-	if err := database.DB.First(&recipe, id).Error; err != nil {
+	if err := database.DB.
+		Preload("User").
+		Preload("Ingredients", func(db *gorm.DB) *gorm.DB {
+			return db.Order("\"order\" ASC, id ASC")
+		}).
+		Preload("Ingredients.Ingredient").
+		First(&recipe, id).Error; err != nil {
 		response.Error(w, http.StatusNotFound, "Recipe not found")
 		return
 	}

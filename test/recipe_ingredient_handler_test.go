@@ -383,3 +383,88 @@ func TestUpdateRecipeIngredient_InvalidQuantity(t *testing.T) {
 	}
 }
 
+// TestGetRecipe_IngredientsOrdered testa se GetRecipe retorna ingredientes ordenados
+func TestGetRecipe_IngredientsOrdered(t *testing.T) {
+	testdb.SetupWithCleanup(t)
+
+	// Criar usuário e receita
+	hashedPassword, _ := auth.HashPassword("senha123")
+	user := testdb.SeedUser(t, "Test User", "test@example.com", hashedPassword, "user")
+	recipe := testdb.SeedRecipe(t, "Bolo de Chocolate", "Delicioso bolo", user.ID, false)
+
+	// Criar 3 ingredientes
+	ing1 := testdb.SeedIngredient(t, "Farinha", "Grãos", 364.0)
+	ing2 := testdb.SeedIngredient(t, "Açúcar", "Grãos", 387.0)
+	ing3 := testdb.SeedIngredient(t, "Ovos", "Proteínas", 155.0)
+
+	// Adicionar ingredientes em ordem não sequencial (order: 2, 0, 1)
+	recipeIng1 := &models.RecipeIngredient{
+		RecipeID:     recipe.ID,
+		IngredientID: ing1.ID,
+		Quantity:     200.0,
+		Unit:         "g",
+		Order:        2, // Terceiro na ordem
+	}
+	recipeIng2 := &models.RecipeIngredient{
+		RecipeID:     recipe.ID,
+		IngredientID: ing2.ID,
+		Quantity:     100.0,
+		Unit:         "g",
+		Order:        0, // Primeiro na ordem
+	}
+	recipeIng3 := &models.RecipeIngredient{
+		RecipeID:     recipe.ID,
+		IngredientID: ing3.ID,
+		Quantity:     2.0,
+		Unit:         "unidades",
+		Order:        1, // Segundo na ordem
+	}
+
+	database.DB.Create(recipeIng1)
+	database.DB.Create(recipeIng2)
+	database.DB.Create(recipeIng3)
+
+	// Fazer requisição GET /recipes/{id}
+	req, _ := http.NewRequest("GET", fmt.Sprintf("/recipes/%d", recipe.ID), nil)
+	ctx := testdb.AddChiURLParam(req, "id", fmt.Sprint(recipe.ID))
+	req = req.WithContext(ctx)
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(handlers.GetRecipe)
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Status code esperado %d, recebido %d. Body: %s", http.StatusOK, rr.Code, rr.Body.String())
+	}
+
+	var result models.Recipe
+	if err := json.Unmarshal(rr.Body.Bytes(), &result); err != nil {
+		t.Fatalf("Erro ao decodificar resposta: %v", err)
+	}
+
+	// Verificar que há 3 ingredientes
+	if len(result.Ingredients) != 3 {
+		t.Fatalf("Esperado 3 ingredientes, recebido %d", len(result.Ingredients))
+	}
+
+	// Verificar ordenação: deve ser order 0, 1, 2 (ing2, ing3, ing1)
+	expectedOrder := []uint{ing2.ID, ing3.ID, ing1.ID}
+	for i, recipeIng := range result.Ingredients {
+		if recipeIng.IngredientID != expectedOrder[i] {
+			t.Errorf("Ingrediente na posição %d: esperado ID %d, recebido %d", 
+				i, expectedOrder[i], recipeIng.IngredientID)
+		}
+	}
+
+	// Verificar que os valores de order estão corretos
+	if result.Ingredients[0].Order != 0 {
+		t.Errorf("Primeiro ingrediente deveria ter order=0, recebido %d", result.Ingredients[0].Order)
+	}
+	if result.Ingredients[1].Order != 1 {
+		t.Errorf("Segundo ingrediente deveria ter order=1, recebido %d", result.Ingredients[1].Order)
+	}
+	if result.Ingredients[2].Order != 2 {
+		t.Errorf("Terceiro ingrediente deveria ter order=2, recebido %d", result.Ingredients[2].Order)
+	}
+}
+
