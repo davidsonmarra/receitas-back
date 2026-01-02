@@ -1,11 +1,9 @@
 package test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -47,107 +45,14 @@ func cleanupTestRecipe(recipeID uint) {
 	database.DB.Delete(&models.Recipe{}, recipeID)
 }
 
-func TestUploadRecipeImage_MissingAuth(t *testing.T) {
-	// Criar request sem autenticação
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	writer.Close()
+// TestUploadRecipeImage_MissingAuth foi removido pois o endpoint legado foi descontinuado
+// Use TestGenerateUploadURL_Unauthorized para testar autenticação
 
-	req, err := http.NewRequest("POST", "/recipes/1/image", body)
-	if err != nil {
-		t.Fatalf("erro ao criar requisição: %v", err)
-	}
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+// TestUploadRecipeImage_MissingFile foi removido pois o endpoint legado foi descontinuado
+// Use TestConfirmImageUpload_InvalidData para testar validação de dados
 
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(handlers.UploadRecipeImage)
-	handler.ServeHTTP(rr, req)
-
-	// Deve retornar 401 Unauthorized
-	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("esperado status 401, obteve %d", rr.Code)
-	}
-}
-
-func TestUploadRecipeImage_MissingFile(t *testing.T) {
-	testdb.SetupWithCleanup(t)
-
-	// Criar usuário e receita de teste
-	user := testdb.SeedUser(t, "Test User", "test@example.com", "hashed_password", "user")
-	recipe, err := setupTestRecipe(user.ID)
-	if err != nil {
-		t.Fatalf("erro ao criar receita de teste: %v", err)
-	}
-
-	// Criar request sem arquivo
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	writer.Close()
-
-	req, err := http.NewRequest("POST", fmt.Sprintf("/recipes/%d/image", recipe.ID), body)
-	if err != nil {
-		t.Fatalf("erro ao criar requisição: %v", err)
-	}
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	// Adicionar contexto com userID
-	ctx := context.WithValue(req.Context(), middleware.UserIDKey, user.ID)
-	req = req.WithContext(ctx)
-
-	// Adicionar parâmetro de rota
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", fmt.Sprintf("%d", recipe.ID))
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(handlers.UploadRecipeImage)
-	handler.ServeHTTP(rr, req)
-
-	// Deve retornar erro de validação
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("esperado status 400, obteve %d", rr.Code)
-	}
-}
-
-func TestUploadRecipeImage_RecipeNotFound(t *testing.T) {
-	testdb.SetupWithCleanup(t)
-
-	// Criar usuário de teste
-	user := testdb.SeedUser(t, "Test User", "test2@example.com", "hashed_password", "user")
-
-	// Criar request com ID de receita inexistente
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	// Adicionar arquivo fake
-	part, _ := writer.CreateFormFile("image", "test.jpg")
-	part.Write([]byte("fake image data"))
-	writer.Close()
-
-	req, err := http.NewRequest("POST", "/recipes/99999/image", body)
-	if err != nil {
-		t.Fatalf("erro ao criar requisição: %v", err)
-	}
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	// Adicionar contexto com userID
-	ctx := context.WithValue(req.Context(), middleware.UserIDKey, user.ID)
-	req = req.WithContext(ctx)
-
-	// Adicionar parâmetro de rota
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", "99999")
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(handlers.UploadRecipeImage)
-	handler.ServeHTTP(rr, req)
-
-	// Deve retornar 404 Not Found
-	if rr.Code != http.StatusNotFound {
-		t.Errorf("esperado status 404, obteve %d", rr.Code)
-	}
-}
+// TestUploadRecipeImage_RecipeNotFound foi removido pois o endpoint legado foi descontinuado
+// Use TestGenerateUploadURL_RecipeNotFound para testar receita não encontrada
 
 func TestDeleteRecipeImage_MissingAuth(t *testing.T) {
 	req, err := http.NewRequest("DELETE", "/recipes/1/image", nil)

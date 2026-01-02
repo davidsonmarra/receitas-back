@@ -925,42 +925,6 @@
       "parentId": "fld_recipe_images"
     },
     {
-      "_id": "req_upload_recipe_image",
-      "_type": "request",
-      "name": "Upload Recipe Image (Legacy)",
-      "url": "{{ _.base_url }}/recipes/1/image",
-      "method": "POST",
-      "body": {
-        "mimeType": "multipart/form-data",
-        "params": [
-          {
-            "name": "image",
-            "value": "",
-            "description": "Selecione uma imagem (JPG, PNG, GIF, WEBP, BMP - máx 5MB)",
-            "type": "file"
-          }
-        ]
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Authorization",
-          "value": "Bearer {{ _.auth_token }}"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": 3,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "description": "Upload de imagem para receita - Método legado (substitui imagem anterior se existir). Use Presigned URLs para melhor performance.",
-      "parentId": "fld_recipe_images"
-    },
-    {
       "_id": "req_delete_recipe_image",
       "_type": "request",
       "name": "Delete Recipe Image",
@@ -975,7 +939,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 4,
+      "metaSortKey": 3,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -996,7 +960,7 @@
       "parameters": [],
       "headers": [],
       "authentication": {},
-      "metaSortKey": 5,
+      "metaSortKey": 4,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1033,7 +997,7 @@
       ],
       "headers": [],
       "authentication": {},
-      "metaSortKey": 6,
+      "metaSortKey": 5,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,

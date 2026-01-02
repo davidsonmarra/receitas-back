@@ -76,9 +76,6 @@ func Setup() *chi.Mux {
 		// POST /recipes/{id}/image/confirm - confirmar upload
 		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/{id}/image/confirm", handlers.ConfirmImageUpload)
 
-		// POST /recipes/{id}/image - upload de imagem (legado, mantido para compatibilidade)
-		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/{id}/image", handlers.UploadRecipeImage)
-
 		// DELETE /recipes/{id}/image - deletar imagem
 		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/{id}/image", handlers.DeleteRecipeImage)
 	})
