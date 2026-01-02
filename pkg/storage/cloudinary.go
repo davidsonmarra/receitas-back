@@ -3,11 +3,14 @@ package storage
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -22,6 +25,7 @@ type ImageService interface {
 	DeleteImage(ctx context.Context, publicID string) error
 	GetOptimizedURL(publicID string, width, height int, quality string) (string, error)
 	GetImageVariants(publicID string) map[string]string
+	GenerateUploadSignature(publicID, folder string) (*UploadSignature, error)
 }
 
 // ServiceFactory é uma função que cria um ImageService
@@ -75,6 +79,16 @@ type UploadResult struct {
 	Height    int    `json:"height"`
 	Format    string `json:"format"`
 	Bytes     int    `json:"bytes"`
+}
+
+// UploadSignature contém dados para upload direto ao Cloudinary
+type UploadSignature struct {
+	UploadURL string `json:"upload_url"`
+	PublicID  string `json:"public_id"`
+	Timestamp int64  `json:"timestamp"`
+	Signature string `json:"signature"`
+	APIKey    string `json:"api_key"`
+	Folder    string `json:"folder"`
 }
 
 // UploadImage faz upload de uma imagem para o Cloudinary
@@ -289,6 +303,57 @@ func generatePublicID(filename string) string {
 	// Adicionar timestamp para garantir unicidade
 	timestamp := time.Now().Unix()
 	return fmt.Sprintf("%s_%d", name, timestamp)
+}
+
+// GenerateUploadSignature gera assinatura para upload direto ao Cloudinary
+func (s *CloudinaryService) GenerateUploadSignature(publicID, folder string) (*UploadSignature, error) {
+	if s.cld == nil {
+		return nil, fmt.Errorf("serviço cloudinary não inicializado")
+	}
+
+	timestamp := time.Now().Unix()
+
+	// Criar mapa de parâmetros
+	params := map[string]interface{}{
+		"folder":    folder,
+		"public_id": publicID,
+		"timestamp": timestamp,
+	}
+
+	// Gerar signature manualmente (Cloudinary usa SHA1)
+	signature := generateCloudinarySignature(params, s.cld.Config.Cloud.APISecret)
+
+	return &UploadSignature{
+		UploadURL: fmt.Sprintf("https://api.cloudinary.com/v1_1/%s/image/upload", s.cld.Config.Cloud.CloudName),
+		PublicID:  publicID,
+		Timestamp: timestamp,
+		Signature: signature,
+		APIKey:    s.cld.Config.Cloud.APIKey,
+		Folder:    folder,
+	}, nil
+}
+
+// generateCloudinarySignature gera assinatura SHA1 para Cloudinary
+func generateCloudinarySignature(params map[string]interface{}, apiSecret string) string {
+	// Ordenar chaves alfabeticamente
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	// Construir string de parâmetros
+	var parts []string
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%v", k, params[k]))
+	}
+	paramsString := strings.Join(parts, "&")
+
+	// Adicionar API secret e gerar SHA1
+	toSign := paramsString + apiSecret
+	h := sha1.New()
+	h.Write([]byte(toSign))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // ValidateImageSize valida o tamanho do arquivo

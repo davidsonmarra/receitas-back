@@ -117,3 +117,19 @@ func (m *MockCloudinaryService) GetImageVariants(publicID string) map[string]str
 	}
 }
 
+// GenerateUploadSignature gera assinatura simulada para upload direto
+func (m *MockCloudinaryService) GenerateUploadSignature(publicID, folder string) (*storage.UploadSignature, error) {
+	if publicID == "" {
+		return nil, fmt.Errorf("publicID não pode ser vazio")
+	}
+
+	return &storage.UploadSignature{
+		UploadURL: "https://api.cloudinary.com/v1_1/mock/image/upload",
+		PublicID:  publicID,
+		Timestamp: 1234567890,
+		Signature: "mock_signature_abc123",
+		APIKey:    "mock_api_key",
+		Folder:    folder,
+	}, nil
+}
+

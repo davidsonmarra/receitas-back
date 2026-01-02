@@ -1,10 +1,14 @@
 package handlers
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 
 	"github.com/davidsonmarra/receitas-app/internal/http/middleware"
 	"github.com/davidsonmarra/receitas-app/internal/models"
@@ -20,6 +24,121 @@ const (
 	maxImageHeight = 2000      // pixels
 	imageFolder    = "recipes" // pasta no Cloudinary
 )
+
+// GenerateUploadURL gera URL e assinatura para upload direto ao Cloudinary
+func GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
+	recipeID := chi.URLParam(r, "id")
+
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "Autenticação necessária")
+		return
+	}
+
+	var recipe models.Recipe
+	if err := database.DB.First(&recipe, recipeID).Error; err != nil {
+		response.Error(w, http.StatusNotFound, "Receita não encontrada")
+		return
+	}
+
+	if !canModifyRecipe(&recipe, userID) {
+		response.Error(w, http.StatusForbidden, "Você não tem permissão para modificar esta receita")
+		return
+	}
+
+	cloudinaryService, err := storage.NewCloudinaryService()
+	if err != nil {
+		log.ErrorCtx(r.Context(), "failed to initialize cloudinary", "error", err)
+		response.Error(w, http.StatusInternalServerError, "Erro ao configurar serviço de imagens")
+		return
+	}
+
+	publicID := fmt.Sprintf("recipe_%s_%d", recipeID, time.Now().Unix())
+
+	uploadSig, err := cloudinaryService.GenerateUploadSignature(publicID, imageFolder)
+	if err != nil {
+		log.ErrorCtx(r.Context(), "failed to generate upload signature", "error", err)
+		response.Error(w, http.StatusInternalServerError, "Erro ao gerar URL de upload")
+		return
+	}
+
+	log.InfoCtx(r.Context(), "upload signature generated",
+		"recipe_id", recipeID,
+		"public_id", publicID,
+		"user_id", userID)
+
+	response.JSON(w, http.StatusOK, uploadSig)
+}
+
+// ConfirmImageUploadRequest request de confirmação de upload
+type ConfirmImageUploadRequest struct {
+	PublicID  string `json:"public_id" validate:"required"`
+	SecureURL string `json:"secure_url" validate:"required,url"`
+	Width     int    `json:"width" validate:"required,min=1"`
+	Height    int    `json:"height" validate:"required,min=1"`
+	Format    string `json:"format" validate:"required"`
+	Bytes     int    `json:"bytes" validate:"required,min=1"`
+}
+
+// ConfirmImageUpload confirma e salva metadados após upload direto ao Cloudinary
+func ConfirmImageUpload(w http.ResponseWriter, r *http.Request) {
+	recipeID := chi.URLParam(r, "id")
+
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "Autenticação necessária")
+		return
+	}
+
+	var req ConfirmImageUploadRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.ValidationError(w, "Dados inválidos")
+		return
+	}
+
+	if err := validator.New().Struct(req); err != nil {
+		response.ValidationError(w, "Dados de confirmação incompletos")
+		return
+	}
+
+	var recipe models.Recipe
+	if err := database.DB.First(&recipe, recipeID).Error; err != nil {
+		response.Error(w, http.StatusNotFound, "Receita não encontrada")
+		return
+	}
+
+	if !canModifyRecipe(&recipe, userID) {
+		response.Error(w, http.StatusForbidden, "Você não tem permissão para modificar esta receita")
+		return
+	}
+
+	// Se já tinha imagem antiga, tentar deletar (best effort)
+	if recipe.ImagePublicID != "" {
+		cloudinaryService, err := storage.NewCloudinaryService()
+		if err == nil {
+			cloudinaryService.DeleteImage(r.Context(), recipe.ImagePublicID)
+		}
+	}
+
+	recipe.ImageURL = req.SecureURL
+	recipe.ImagePublicID = req.PublicID
+
+	if err := database.DB.Save(&recipe).Error; err != nil {
+		log.ErrorCtx(r.Context(), "failed to update recipe with image", "error", err)
+		response.Error(w, http.StatusInternalServerError, "Erro ao atualizar receita")
+		return
+	}
+
+	log.InfoCtx(r.Context(), "recipe image confirmed",
+		"recipe_id", recipe.ID,
+		"user_id", userID,
+		"public_id", req.PublicID)
+
+	response.JSON(w, http.StatusOK, map[string]interface{}{
+		"message": "Imagem confirmada com sucesso",
+		"recipe":  recipe,
+	})
+}
 
 // UploadRecipeImage faz upload de imagem para uma receita
 func UploadRecipeImage(w http.ResponseWriter, r *http.Request) {
