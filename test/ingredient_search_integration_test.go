@@ -111,14 +111,14 @@ func TestIngredientSearchIntegration(t *testing.T) {
 			t.Fatal("nenhum resultado encontrado")
 		}
 
-		// Primeiro resultado deve ser "Arroz integral" (contém ambas palavras)
+		// Primeiro resultado deve ser "Arroz integral" (contém ambas palavras E começa com primeira)
 		first := data[0].(map[string]interface{})
 		firstName := first["name"].(string)
 		
 		if firstName == "Arroz integral" {
-			t.Log("✅ 'Arroz integral' está em primeiro lugar (ranking correto)")
+			t.Log("✅ 'Arroz integral' está em primeiro lugar (Prioridade 1: contém ambas E começa com 'arroz')")
 		} else {
-			t.Logf("⚠️  Primeiro resultado: %s (esperado 'Arroz integral')", firstName)
+			t.Errorf("❌ Primeiro resultado: %s (esperado 'Arroz integral' - ranking incorreto)", firstName)
 		}
 	})
 

@@ -99,19 +99,24 @@ Lista de stopwords ignoradas:
 
 - Palavras com menos de 3 caracteres são ignoradas (após remoção de stopwords)
 
-### 4. Ranking de Relevância (4 Níveis)
+### 4. Ranking de Relevância (6 Níveis)
 
-**Nível 1 (Mais Relevante):** Nome contém TODAS as palavras  
-Exemplo: "Farinha de Trigo" para busca "farinha trigo"
+**Nível 1 (Mais Relevante):** Nome começa com primeira palavra E contém TODAS as palavras  
+Exemplo: "Farinha, de trigo" para busca "farinha trigo" ⭐⭐⭐
 
-**Nível 2:** Nome começa com a primeira palavra  
-Exemplo: "Farinha de Rosca" para busca "farinha trigo"
+**Nível 2:** Nome contém TODAS as palavras (mas não começa com primeira)  
+Exemplo: "Cação com farinha de trigo, frito" para busca "farinha trigo" ⭐⭐⭐
 
-**Nível 3:** Nome contém a primeira palavra  
-Exemplo: "Pão de Farinha" para busca "farinha trigo"
+**Nível 3:** Nome começa com a primeira palavra  
+Exemplo: "Farinha, de arroz" para busca "farinha trigo" ⭐⭐
 
-**Nível 4:** Categoria contém alguma palavra  
-Exemplo: Categoria "farinhas" para busca "farinha trigo"
+**Nível 4:** Nome contém a primeira palavra  
+Exemplo: "Soja, farinha" para busca "farinha trigo" ⭐
+
+**Nível 5:** Categoria contém alguma palavra  
+Exemplo: Categoria "cereais" para busca "farinha trigo" ⭐
+
+**Ordenação secundária:** Alfabética (desempate entre mesma prioridade)
 
 ## 📈 Performance
 

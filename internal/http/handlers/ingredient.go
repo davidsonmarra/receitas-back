@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -78,34 +79,59 @@ func ListIngredients(w http.ResponseWriter, r *http.Request) {
 			whereClause := strings.Join(conditions, " OR ")
 			query = query.Where(whereClause, args...)
 
-			// Ordenar por relevância: quanto mais palavras no nome, melhor
-			var orderCases []string
-			var orderArgs []interface{}
+		// Ordenar por relevância: 6 níveis de prioridade
+		var orderCases []string
+		var orderArgs []interface{}
 
-			// Prioridade 1: Nome contém TODAS as palavras (maior relevância)
+		// Prioridade 1: Nome começa com primeira palavra E contém TODAS as palavras (maior relevância)
+		if len(searchWords) > 1 {
+			var allWordsWithStartConditions []string
+			// Condição 1: começa com primeira palavra
+			allWordsWithStartConditions = append(allWordsWithStartConditions, "LOWER(name) LIKE ?")
+			orderArgs = append(orderArgs, searchWords[0]+"%")
+			// Condição 2+: contém todas as palavras
+			for _, word := range searchWords {
+				allWordsWithStartConditions = append(allWordsWithStartConditions, "LOWER(name) LIKE ?")
+				orderArgs = append(orderArgs, "%"+word+"%")
+			}
+			orderCases = append(orderCases, "WHEN "+strings.Join(allWordsWithStartConditions, " AND ")+" THEN 1")
+		}
+
+		// Prioridade 2: Nome contém TODAS as palavras (mas não começa com primeira)
+		if len(searchWords) > 1 {
 			var allWordsConditions []string
 			for _, word := range searchWords {
 				allWordsConditions = append(allWordsConditions, "LOWER(name) LIKE ?")
 				orderArgs = append(orderArgs, "%"+word+"%")
 			}
-			orderCases = append(orderCases, "WHEN "+strings.Join(allWordsConditions, " AND ")+" THEN 1")
+			orderCases = append(orderCases, "WHEN "+strings.Join(allWordsConditions, " AND ")+" THEN 2")
+		}
 
-			// Prioridade 2: Nome começa com a primeira palavra
-			orderCases = append(orderCases, "WHEN LOWER(name) LIKE ? THEN 2")
-			orderArgs = append(orderArgs, searchWords[0]+"%")
+		// Prioridade 3: Nome começa com a primeira palavra
+		orderCases = append(orderCases, "WHEN LOWER(name) LIKE ? THEN 3")
+		orderArgs = append(orderArgs, searchWords[0]+"%")
 
-			// Prioridade 3: Nome contém a primeira palavra
-			orderCases = append(orderCases, "WHEN LOWER(name) LIKE ? THEN 3")
-			orderArgs = append(orderArgs, "%"+searchWords[0]+"%")
+		// Prioridade 4: Nome contém a primeira palavra
+		orderCases = append(orderCases, "WHEN LOWER(name) LIKE ? THEN 4")
+		orderArgs = append(orderArgs, "%"+searchWords[0]+"%")
 
-			// Prioridade 4: Categoria contém alguma palavra
-			orderCases = append(orderCases, "WHEN LOWER(category) LIKE ? THEN 4")
-			orderArgs = append(orderArgs, "%"+searchWords[0]+"%")
+		// Prioridade 5: Categoria contém alguma palavra
+		orderCases = append(orderCases, "WHEN LOWER(category) LIKE ? THEN 5")
+		orderArgs = append(orderArgs, "%"+searchWords[0]+"%")
 
-			orderCases = append(orderCases, "ELSE 5 END")
-			orderSQL := "CASE " + strings.Join(orderCases, " ") + " "
+		orderCases = append(orderCases, "ELSE 6 END")
+		orderSQL := "CASE " + strings.Join(orderCases, " ")
 
-			query = query.Order(database.DB.Raw(orderSQL, orderArgs...))
+		// Construir string SQL completa substituindo placeholders (para debug)
+		finalSQL := orderSQL
+		for _, arg := range orderArgs {
+			// Escapar aspas simples na string
+			escaped := strings.ReplaceAll(fmt.Sprintf("%v", arg), "'", "''")
+			finalSQL = strings.Replace(finalSQL, "?", fmt.Sprintf("'%s'", escaped), 1)
+		}
+		
+		// Aplicar ordenação usando string SQL final
+		query = query.Order(fmt.Sprintf("%s, name ASC", finalSQL))
 		}
 	} else {
 		// Sem busca, ordenar alfabeticamente

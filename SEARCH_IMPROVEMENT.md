@@ -18,14 +18,17 @@ A busca agora divide o termo em palavras individuais e busca cada uma separadame
 
 **Palavras válidas:** Mínimo 3 caracteres (após remoção de stopwords)
 
-### 2. Busca com Ranking de Relevância Aprimorado
+### 2. Busca com Ranking de Relevância Aprimorado (6 Níveis)
 
 Os resultados são ordenados automaticamente por relevância:
 
-**Prioridade 1:** Nome contém **TODAS** as palavras buscadas (maior relevância)  
-**Prioridade 2:** Nome **começa** com a primeira palavra buscada  
-**Prioridade 3:** Nome **contém** a primeira palavra buscada  
-**Prioridade 4:** Categoria **contém** alguma palavra buscada
+**Prioridade 1:** Nome **começa** com primeira palavra E contém **TODAS** as palavras (maior relevância)  
+**Prioridade 2:** Nome contém **TODAS** as palavras (mas não começa com primeira)  
+**Prioridade 3:** Nome **começa** com a primeira palavra buscada  
+**Prioridade 4:** Nome **contém** a primeira palavra buscada  
+**Prioridade 5:** Categoria **contém** alguma palavra buscada
+
+**Ordenação secundária:** Alfabética (desempate entre mesma prioridade)
 
 ### 3. Busca Case-Insensitive
 
@@ -212,24 +215,30 @@ WHERE (LOWER(name) LIKE '%palavra1%' OR LOWER(category) LIKE '%palavra1%')
    OR (LOWER(name) LIKE '%palavra2%' OR LOWER(category) LIKE '%palavra2%')
 ```
 
-**Lógica de Ranking (4 níveis):**
+**Lógica de Ranking (6 níveis):**
 
 ```sql
-CASE
-  -- Prioridade 1: Nome contém TODAS as palavras
-  WHEN LOWER(name) LIKE '%palavra1%' AND LOWER(name) LIKE '%palavra2%' THEN 1
-
-  -- Prioridade 2: Nome começa com primeira palavra
-  WHEN LOWER(name) LIKE 'palavra1%' THEN 2
-
-  -- Prioridade 3: Nome contém primeira palavra
-  WHEN LOWER(name) LIKE '%palavra1%' THEN 3
-
-  -- Prioridade 4: Categoria contém alguma palavra
-  WHEN LOWER(category) LIKE '%palavra1%' THEN 4
-
-  ELSE 5
-END
+CASE 
+  -- Prioridade 1: Nome começa com primeira E contém TODAS as palavras
+  WHEN LOWER(name) LIKE 'palavra1%' 
+   AND LOWER(name) LIKE '%palavra1%' 
+   AND LOWER(name) LIKE '%palavra2%' THEN 1
+  
+  -- Prioridade 2: Nome contém TODAS as palavras (mas não começa)
+  WHEN LOWER(name) LIKE '%palavra1%' 
+   AND LOWER(name) LIKE '%palavra2%' THEN 2
+  
+  -- Prioridade 3: Nome começa com primeira palavra
+  WHEN LOWER(name) LIKE 'palavra1%' THEN 3
+  
+  -- Prioridade 4: Nome contém primeira palavra
+  WHEN LOWER(name) LIKE '%palavra1%' THEN 4
+  
+  -- Prioridade 5: Categoria contém alguma palavra
+  WHEN LOWER(category) LIKE '%palavra1%' THEN 5
+  
+  ELSE 6 
+END, name ASC  -- Ordenação alfabética como desempate
 ```
 
 ### Normalização
