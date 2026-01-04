@@ -15,6 +15,34 @@ import (
 	"github.com/davidsonmarra/receitas-app/pkg/validation"
 )
 
+// splitSearchTerms divide o termo de busca em palavras válidas, removendo stopwords
+func splitSearchTerms(search string) []string {
+	// Stopwords comuns em português
+	stopwords := map[string]bool{
+		"de": true, "da": true, "do": true, "das": true, "dos": true,
+		"e": true, "ou": true, "com": true, "em": true, "a": true,
+		"o": true, "as": true, "os": true, "para": true,
+	}
+
+	// Normalizar: lowercase e trim
+	search = strings.TrimSpace(strings.ToLower(search))
+
+	// Dividir em palavras
+	words := strings.Fields(search)
+
+	// Filtrar palavras válidas (>= 3 caracteres e não stopwords)
+	var validWords []string
+	for _, word := range words {
+		word = strings.TrimSpace(word)
+		// Manter palavras com 3+ caracteres que não sejam stopwords
+		if len(word) >= 3 && !stopwords[word] {
+			validWords = append(validWords, word)
+		}
+	}
+
+	return validWords
+}
+
 // ListIngredients lista todos ingredientes com filtros e paginação
 func ListIngredients(w http.ResponseWriter, r *http.Request) {
 	params := pagination.ExtractParams(r)
@@ -25,26 +53,60 @@ func ListIngredients(w http.ResponseWriter, r *http.Request) {
 	if search := r.URL.Query().Get("search"); search != "" {
 		// Normalizar busca: lowercase e trim
 		search = strings.TrimSpace(strings.ToLower(search))
-		searchPattern := "%" + search + "%"
-		searchStart := search + "%"
 
-		// Buscar em nome E categoria
-		query = query.Where(
-			"LOWER(name) LIKE ? OR LOWER(category) LIKE ?",
-			searchPattern, searchPattern,
-		)
+		// Dividir em palavras válidas
+		searchWords := splitSearchTerms(search)
 
-		// Ordenar por relevância: nome começa > nome contém > categoria contém
-		query = query.Order(database.DB.Raw(
-			"CASE "+
-				"WHEN LOWER(name) LIKE ? THEN 1 "+
-				"WHEN LOWER(name) LIKE ? THEN 2 "+
-				"WHEN LOWER(category) LIKE ? THEN 3 "+
-				"ELSE 4 END",
-			searchStart,   // nome começa com termo
-			searchPattern, // nome contém termo
-			searchPattern, // categoria contém termo
-		))
+		// Se não houver palavras válidas, usar busca original (termo completo)
+		if len(searchWords) == 0 {
+			searchPattern := "%" + search + "%"
+			query = query.Where(
+				"LOWER(name) LIKE ? OR LOWER(category) LIKE ?",
+				searchPattern, searchPattern,
+			)
+		} else {
+			// Construir WHERE com múltiplas palavras (OR)
+			var conditions []string
+			var args []interface{}
+
+			for _, word := range searchWords {
+				pattern := "%" + word + "%"
+				conditions = append(conditions, "(LOWER(name) LIKE ? OR LOWER(category) LIKE ?)")
+				args = append(args, pattern, pattern)
+			}
+
+			whereClause := strings.Join(conditions, " OR ")
+			query = query.Where(whereClause, args...)
+
+			// Ordenar por relevância: quanto mais palavras no nome, melhor
+			var orderCases []string
+			var orderArgs []interface{}
+
+			// Prioridade 1: Nome contém TODAS as palavras (maior relevância)
+			var allWordsConditions []string
+			for _, word := range searchWords {
+				allWordsConditions = append(allWordsConditions, "LOWER(name) LIKE ?")
+				orderArgs = append(orderArgs, "%"+word+"%")
+			}
+			orderCases = append(orderCases, "WHEN "+strings.Join(allWordsConditions, " AND ")+" THEN 1")
+
+			// Prioridade 2: Nome começa com a primeira palavra
+			orderCases = append(orderCases, "WHEN LOWER(name) LIKE ? THEN 2")
+			orderArgs = append(orderArgs, searchWords[0]+"%")
+
+			// Prioridade 3: Nome contém a primeira palavra
+			orderCases = append(orderCases, "WHEN LOWER(name) LIKE ? THEN 3")
+			orderArgs = append(orderArgs, "%"+searchWords[0]+"%")
+
+			// Prioridade 4: Categoria contém alguma palavra
+			orderCases = append(orderCases, "WHEN LOWER(category) LIKE ? THEN 4")
+			orderArgs = append(orderArgs, "%"+searchWords[0]+"%")
+
+			orderCases = append(orderCases, "ELSE 5 END")
+			orderSQL := "CASE " + strings.Join(orderCases, " ") + " "
+
+			query = query.Order(database.DB.Raw(orderSQL, orderArgs...))
+		}
 	} else {
 		// Sem busca, ordenar alfabeticamente
 		query = query.Order("name ASC")
@@ -72,7 +134,7 @@ func ListIngredients(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.InfoCtx(r.Context(), "ingredients listed", "total", total, "returned", len(ingredients), "search", r.URL.Query().Get("search"))
+	log.InfoCtx(r.Context(), "ingredients listed", "total", total, "returned", len(ingredients), "search", r.URL.Query().Get("search"), "search_words", len(splitSearchTerms(r.URL.Query().Get("search"))))
 	paginatedResponse := pagination.BuildResponse(ingredients, params, total)
 	response.JSON(w, http.StatusOK, paginatedResponse)
 }
