@@ -1,14 +1,14 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2025-12-26T20:00:00.000Z",
+  "__export_date": "2026-01-05T20:00:00.000Z",
   "__export_source": "insomnia.desktop.app:v2023.5.8",
   "resources": [
     {
       "_id": "wrk_receitas_app",
       "_type": "workspace",
       "name": "Receitas API",
-      "description": "API para gerenciamento de receitas com autenticação JWT",
+      "description": "API para gerenciamento de receitas com autenticação JWT e sistema de avaliações",
       "scope": "collection"
     },
     {
@@ -22,7 +22,10 @@
         "user_email": "user@example.com",
         "user_password": "senha123",
         "admin_email": "admin@receitas.com",
-        "admin_password": "admin123"
+        "admin_password": "admin123",
+        "recipe_id": "1",
+        "ingredient_id": "1",
+        "rating_id": "1"
       },
       "dataPropertyOrder": null,
       "color": null,
@@ -295,6 +298,40 @@
       "parentId": "fld_recipes_public"
     },
     {
+      "_id": "req_list_recipes_by_rating",
+      "_type": "request",
+      "name": "List Recipes (Sorted by Rating)",
+      "url": "{{ _.base_url }}/recipes",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "sort_by",
+          "value": "rating"
+        },
+        {
+          "name": "page",
+          "value": "1"
+        },
+        {
+          "name": "limit",
+          "value": "10"
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Listar receitas ordenadas por melhor avaliação",
+      "parentId": "fld_recipes_public"
+    },
+    {
       "_id": "req_list_recipes_filtered",
       "_type": "request",
       "name": "List Recipes (Filtered)",
@@ -320,7 +357,7 @@
       ],
       "headers": [],
       "authentication": {},
-      "metaSortKey": 3,
+      "metaSortKey": 4,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -335,13 +372,13 @@
       "_id": "req_get_recipe",
       "_type": "request",
       "name": "Get Recipe by ID",
-      "url": "{{ _.base_url }}/recipes/1",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}",
       "method": "GET",
       "body": {},
       "parameters": [],
       "headers": [],
       "authentication": {},
-      "metaSortKey": 4,
+      "metaSortKey": 5,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -349,7 +386,7 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "description": "Buscar receita específica por ID",
+      "description": "Buscar receita específica por ID (com average_rating e rating_count)",
       "parentId": "fld_recipes_public"
     },
     {
@@ -393,13 +430,14 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "description": "Criar nova receita (requer auth_token)",
-      "parentId": "fld_recipes_auth"
+      "parentId": "fld_recipes_auth",
+      "afterResponseScript": "const response = await insomnia.response.json();\nif (response && response.id) {\n  await insomnia.environment.set('recipe_id', response.id.toString());\n  console.log('✅ Recipe ID salvo:', response.id);\n}"
     },
     {
       "_id": "req_update_recipe",
       "_type": "request",
       "name": "Update Recipe",
-      "url": "{{ _.base_url }}/recipes/1",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}",
       "method": "PUT",
       "body": {
         "mimeType": "application/json",
@@ -432,7 +470,7 @@
       "_id": "req_delete_recipe",
       "_type": "request",
       "name": "Delete Recipe",
-      "url": "{{ _.base_url }}/recipes/1",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}",
       "method": "DELETE",
       "body": {},
       "parameters": [],
@@ -455,9 +493,187 @@
       "parentId": "fld_recipes_auth"
     },
     {
+      "_id": "fld_ratings",
+      "_type": "request_group",
+      "name": "4. Ratings (Avaliações)",
+      "description": "Sistema de avaliações de receitas - Estrelas (1-5) + comentários opcionais",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 4.5,
+      "parentId": "wrk_receitas_app"
+    },
+    {
+      "_id": "req_create_rating",
+      "_type": "request",
+      "name": "Create/Update Rating",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/ratings",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"score\": 5,\n\t\"comment\": \"Receita maravilhosa! Ficou perfeita.\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Criar ou atualizar avaliação (upsert). Score: 1-5, comment opcional (max 1000 chars). Se já existe, atualiza.",
+      "parentId": "fld_ratings",
+      "afterResponseScript": "const response = await insomnia.response.json();\nif (response && response.id) {\n  await insomnia.environment.set('rating_id', response.id.toString());\n  console.log('✅ Rating ID salvo:', response.id);\n  console.log('⭐ Score:', response.score);\n}"
+    },
+    {
+      "_id": "req_get_my_rating",
+      "_type": "request",
+      "name": "Get My Rating",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/ratings/me",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Obter minha avaliação para esta receita. Retorna 404 se ainda não avaliou.",
+      "parentId": "fld_ratings"
+    },
+    {
+      "_id": "req_delete_my_rating",
+      "_type": "request",
+      "name": "Delete My Rating",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/ratings/me",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Deletar minha avaliação (soft delete)",
+      "parentId": "fld_ratings"
+    },
+    {
+      "_id": "req_list_ratings",
+      "_type": "request",
+      "name": "List Recipe Ratings",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/ratings",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "page",
+          "value": "1"
+        },
+        {
+          "name": "limit",
+          "value": "10"
+        },
+        {
+          "name": "sort",
+          "value": "newest",
+          "description": "newest, oldest, highest, lowest"
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Listar todas as avaliações de uma receita (público, com paginação e ordenação)",
+      "parentId": "fld_ratings"
+    },
+    {
+      "_id": "req_get_rating_stats",
+      "_type": "request",
+      "name": "Get Rating Stats",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/ratings/stats",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Obter estatísticas: média, total e distribuição por estrelas (1-5)",
+      "parentId": "fld_ratings"
+    },
+    {
+      "_id": "req_admin_delete_rating",
+      "_type": "request",
+      "name": "Admin Delete Rating",
+      "url": "{{ _.base_url }}/admin/ratings/{{ _.rating_id }}",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.admin_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 6,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Admin pode deletar qualquer avaliação (moderação)",
+      "parentId": "fld_ratings"
+    },
+    {
       "_id": "fld_admin_recipes",
       "_type": "request_group",
-      "name": "4. Admin - Recipes",
+      "name": "5. Admin - Recipes",
       "description": "Administração de receitas - Requer role admin (Execute Login Admin primeiro)",
       "environment": {},
       "environmentPropertyOrder": null,
@@ -527,7 +743,7 @@
       "_id": "req_admin_update_recipe",
       "_type": "request",
       "name": "Admin Update Any Recipe",
-      "url": "{{ _.base_url }}/admin/recipes/1",
+      "url": "{{ _.base_url }}/admin/recipes/{{ _.recipe_id }}",
       "method": "PUT",
       "body": {
         "mimeType": "application/json",
@@ -560,7 +776,7 @@
       "_id": "req_admin_delete_recipe",
       "_type": "request",
       "name": "Admin Delete Any Recipe",
-      "url": "{{ _.base_url }}/admin/recipes/1",
+      "url": "{{ _.base_url }}/admin/recipes/{{ _.recipe_id }}",
       "method": "DELETE",
       "body": {},
       "parameters": [],
@@ -585,7 +801,7 @@
     {
       "_id": "fld_ingredients_public",
       "_type": "request_group",
-      "name": "5. Ingredients (Public)",
+      "name": "6. Ingredients (Public)",
       "description": "Busca e listagem de ingredientes - Endpoints públicos",
       "environment": {},
       "environmentPropertyOrder": null,
@@ -673,7 +889,7 @@
       "_id": "req_get_ingredient",
       "_type": "request",
       "name": "Get Ingredient by ID",
-      "url": "{{ _.base_url }}/ingredients/1",
+      "url": "{{ _.base_url }}/ingredients/{{ _.ingredient_id }}",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -714,7 +930,7 @@
     {
       "_id": "fld_recipe_ingredients",
       "_type": "request_group",
-      "name": "6. Recipe Ingredients",
+      "name": "7. Recipe Ingredients",
       "description": "Gerenciar ingredientes de receitas e cálculo nutricional",
       "environment": {},
       "environmentPropertyOrder": null,
@@ -725,7 +941,7 @@
       "_id": "req_list_recipe_ingredients",
       "_type": "request",
       "name": "List Recipe Ingredients",
-      "url": "{{ _.base_url }}/recipes/1/ingredients",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/ingredients",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -746,7 +962,7 @@
       "_id": "req_add_recipe_ingredient",
       "_type": "request",
       "name": "Add Ingredient to Recipe",
-      "url": "{{ _.base_url }}/recipes/1/ingredients",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/ingredients",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -779,7 +995,7 @@
       "_id": "req_update_recipe_ingredient",
       "_type": "request",
       "name": "Update Recipe Ingredient",
-      "url": "{{ _.base_url }}/recipes/1/ingredients/1",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/ingredients/{{ _.ingredient_id }}",
       "method": "PUT",
       "body": {
         "mimeType": "application/json",
@@ -812,7 +1028,7 @@
       "_id": "req_delete_recipe_ingredient",
       "_type": "request",
       "name": "Delete Recipe Ingredient",
-      "url": "{{ _.base_url }}/recipes/1/ingredients/1",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/ingredients/{{ _.ingredient_id }}",
       "method": "DELETE",
       "body": {},
       "parameters": [],
@@ -838,7 +1054,7 @@
       "_id": "req_get_recipe_nutrition",
       "_type": "request",
       "name": "Get Recipe Nutrition",
-      "url": "{{ _.base_url }}/recipes/1/nutrition",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/nutrition",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -858,7 +1074,7 @@
     {
       "_id": "fld_recipe_images",
       "_type": "request_group",
-      "name": "7. Recipe Images",
+      "name": "8. Recipe Images",
       "description": "Upload e gerenciamento de imagens de receitas com Cloudinary (Presigned URLs e upload direto)",
       "environment": {},
       "environmentPropertyOrder": null,
@@ -869,7 +1085,7 @@
       "_id": "req_generate_upload_url",
       "_type": "request",
       "name": "Generate Upload URL (Presigned)",
-      "url": "{{ _.base_url }}/recipes/1/image/upload-url",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/image/upload-url",
       "method": "POST",
       "body": {},
       "parameters": [],
@@ -895,7 +1111,7 @@
       "_id": "req_confirm_upload",
       "_type": "request",
       "name": "Confirm Upload (Presigned)",
-      "url": "{{ _.base_url }}/recipes/1/image/confirm",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/image/confirm",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -928,7 +1144,7 @@
       "_id": "req_delete_recipe_image",
       "_type": "request",
       "name": "Delete Recipe Image",
-      "url": "{{ _.base_url }}/recipes/1/image",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/image",
       "method": "DELETE",
       "body": {},
       "parameters": [],
@@ -954,7 +1170,7 @@
       "_id": "req_get_image_variants",
       "_type": "request",
       "name": "Get Image Variants",
-      "url": "{{ _.base_url }}/recipes/1/image/variants",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/image/variants",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -975,7 +1191,7 @@
       "_id": "req_get_optimized_image",
       "_type": "request",
       "name": "Get Optimized Image URL",
-      "url": "{{ _.base_url }}/recipes/1/image/optimized",
+      "url": "{{ _.base_url }}/recipes/{{ _.recipe_id }}/image/optimized",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -1011,7 +1227,7 @@
     {
       "_id": "fld_admin_ingredients",
       "_type": "request_group",
-      "name": "8. Admin - Ingredients",
+      "name": "9. Admin - Ingredients",
       "description": "CRUD de ingredientes - Requer role admin (Execute Login Admin primeiro)",
       "environment": {},
       "environmentPropertyOrder": null,
@@ -1049,13 +1265,14 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "description": "Criar novo ingrediente (admin only)",
-      "parentId": "fld_admin_ingredients"
+      "parentId": "fld_admin_ingredients",
+      "afterResponseScript": "const response = await insomnia.response.json();\nif (response && response.id) {\n  await insomnia.environment.set('ingredient_id', response.id.toString());\n  console.log('✅ Ingredient ID salvo:', response.id);\n}"
     },
     {
       "_id": "req_admin_update_ingredient",
       "_type": "request",
       "name": "Update Ingredient",
-      "url": "{{ _.base_url }}/admin/ingredients/1",
+      "url": "{{ _.base_url }}/admin/ingredients/{{ _.ingredient_id }}",
       "method": "PUT",
       "body": {
         "mimeType": "application/json",
@@ -1088,7 +1305,7 @@
       "_id": "req_admin_delete_ingredient",
       "_type": "request",
       "name": "Delete Ingredient",
-      "url": "{{ _.base_url }}/admin/ingredients/1",
+      "url": "{{ _.base_url }}/admin/ingredients/{{ _.ingredient_id }}",
       "method": "DELETE",
       "body": {},
       "parameters": [],
@@ -1113,11 +1330,11 @@
     {
       "_id": "fld_food_analysis",
       "_type": "request_group",
-      "name": "9. Food Analysis (IA)",
+      "name": "10. Food Analysis (IA)",
       "description": "Análise de alimentos com Google Gemini 3 Flash - Reconhecimento automático e cálculo nutricional",
       "environment": {},
       "environmentPropertyOrder": null,
-      "metaSortKey": 9,
+      "metaSortKey": 10,
       "parentId": "wrk_receitas_app"
     },
     {
@@ -1186,11 +1403,11 @@
     {
       "_id": "fld_rate_limit",
       "_type": "request_group",
-      "name": "10. Rate Limit Tests",
+      "name": "11. Rate Limit Tests",
       "description": "Testes de rate limiting - Execute múltiplas vezes para testar limites",
       "environment": {},
       "environmentPropertyOrder": null,
-      "metaSortKey": 10,
+      "metaSortKey": 11,
       "parentId": "wrk_receitas_app"
     },
     {

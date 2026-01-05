@@ -20,7 +20,9 @@ type Recipe struct {
 	UserID        *uint              `gorm:"index" json:"user_id,omitempty"`            // NULL = receita geral, NOT NULL = receita do usuário
 	User          *User              `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Ingredients   []RecipeIngredient `gorm:"foreignKey:RecipeID" json:"ingredients,omitempty"`
-	CreatedAt     time.Time          `gorm:"index" json:"created_at"` // Índice para ordenação rápida
+	AverageRating float64            `gorm:"-" json:"average_rating,omitempty"` // Calculado, não salvo no DB
+	RatingCount   int64              `gorm:"-" json:"rating_count,omitempty"`   // Calculado, não salvo no DB
+	CreatedAt     time.Time          `gorm:"index" json:"created_at"`           // Índice para ordenação rápida
 	UpdatedAt     time.Time          `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt     `gorm:"index" json:"-"`
 }

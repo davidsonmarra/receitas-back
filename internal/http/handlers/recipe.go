@@ -57,6 +57,12 @@ func ListRecipes(w http.ResponseWriter, r *http.Request) {
 	// Extrair parâmetros de paginação
 	params := pagination.ExtractParams(r)
 
+	// Extrair parâmetro de ordenação
+	sortBy := r.URL.Query().Get("sort_by")
+	if sortBy == "" {
+		sortBy = "newest"
+	}
+
 	// Count total de receitas
 	var total int64
 	if err := database.DB.Model(&models.Recipe{}).Count(&total).Error; err != nil {
@@ -68,12 +74,30 @@ func ListRecipes(w http.ResponseWriter, r *http.Request) {
 	// Buscar receitas paginadas
 	var recipes []models.Recipe
 	offset := pagination.CalculateOffset(params)
-	if err := database.DB.Limit(params.Limit).Offset(offset).
-		Order("created_at DESC").
-		Find(&recipes).Error; err != nil {
+	
+	query := database.DB.Limit(params.Limit).Offset(offset)
+
+	// Aplicar ordenação
+	if sortBy == "rating" {
+		// Ordenar por rating (média de avaliações)
+		// Usa subquery para calcular a média e ordenar
+		query = query.
+			Joins("LEFT JOIN (SELECT recipe_id, AVG(score) as avg_score, COUNT(*) as rating_count FROM ratings WHERE deleted_at IS NULL GROUP BY recipe_id) r ON r.recipe_id = recipes.id").
+			Order("COALESCE(r.avg_score, 0) DESC, r.rating_count DESC, recipes.created_at DESC")
+	} else {
+		// Ordenação padrão por data de criação
+		query = query.Order("created_at DESC")
+	}
+
+	if err := query.Find(&recipes).Error; err != nil {
 		log.ErrorCtx(r.Context(), "failed to list recipes", "error", err)
 		response.Error(w, http.StatusInternalServerError, "Failed to list recipes")
 		return
+	}
+
+	// Calcular estatísticas de avaliação para cada receita
+	for i := range recipes {
+		recipes[i].AverageRating, recipes[i].RatingCount = calculateRatingStats(database.DB, recipes[i].ID)
 	}
 
 	// Montar resposta paginada
@@ -96,6 +120,9 @@ func GetRecipe(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusNotFound, "Recipe not found")
 		return
 	}
+
+	// Calcular estatísticas de avaliação
+	recipe.AverageRating, recipe.RatingCount = calculateRatingStats(database.DB, recipe.ID)
 
 	response.JSON(w, http.StatusOK, recipe)
 }

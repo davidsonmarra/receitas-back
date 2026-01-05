@@ -106,6 +106,26 @@ func Setup() *chi.Mux {
 	// Rota de cálculo nutricional
 	r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/recipes/{id}/nutrition", handlers.GetRecipeNutrition)
 
+	// Rotas de avaliações de receitas
+	r.Route("/recipes/{id}/ratings", func(r chi.Router) {
+		// Rotas públicas (sem autenticação)
+		// GET /recipes/{id}/ratings - listar avaliações da receita
+		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/", handlers.ListRecipeRatings)
+
+		// GET /recipes/{id}/ratings/stats - obter estatísticas de avaliações
+		r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/stats", handlers.GetRatingStats)
+
+		// Rotas protegidas (requer autenticação)
+		// GET /recipes/{id}/ratings/me - obter minha avaliação
+		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitRead(rateLimitConfig)).Get("/me", handlers.GetMyRating)
+
+		// POST /recipes/{id}/ratings - criar ou atualizar minha avaliação
+		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/", handlers.CreateOrUpdateRating)
+
+		// DELETE /recipes/{id}/ratings/me - deletar minha avaliação
+		r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/me", handlers.DeleteMyRating)
+	})
+
 	// Rotas de análise de alimentos com IA
 	// POST /analyze-food - Iniciar análise de alimento
 	r.With(customMiddleware.RequireAuth, customMiddleware.RateLimitWrite(rateLimitConfig)).
@@ -146,6 +166,10 @@ func Setup() *chi.Mux {
 			// DELETE /admin/ingredients/{id} - deletar ingrediente
 			r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/{id}", handlers.DeleteIngredient)
 		})
+
+		// Rotas de avaliações admin (moderação)
+		// DELETE /admin/ratings/{rating_id} - deletar qualquer avaliação
+		r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Delete("/ratings/{rating_id}", handlers.AdminDeleteRating)
 	})
 
 	return r

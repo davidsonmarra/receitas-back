@@ -38,6 +38,11 @@ WHERE table_name = 'recipes' AND column_name = 'instructions';
 - **Descrição:** Adiciona coluna `instructions` (TEXT, nullable) à tabela `recipes` para armazenar o modo de preparo em formato Markdown
 - **Reversão:** `ALTER TABLE recipes DROP COLUMN instructions;`
 
+### 002_create_ratings_table.sql
+- **Data:** 2026-01-04
+- **Descrição:** Cria tabela `ratings` para sistema de avaliações de receitas com scores (1-5), comentários opcionais, constraint de unicidade por usuário/receita e índices para performance
+- **Reversão:** `DROP TABLE ratings;`
+
 ## Notas Importantes
 
 - As migrações devem ser aplicadas na ordem numérica

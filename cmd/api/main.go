@@ -51,6 +51,7 @@ func main() {
 		&models.Recipe{},
 		&models.Ingredient{},
 		&models.RecipeIngredient{},
+		&models.Rating{},
 	); err != nil {
 		log.Error("failed to migrate database", "error", err)
 		os.Exit(1)
