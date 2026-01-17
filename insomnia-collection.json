@@ -17,7 +17,9 @@
       "name": "Base Environment",
       "data": {
         "auth_token": "",
+        "refresh_token": "",
         "admin_token": "",
+        "admin_refresh_token": "",
         "food_job_id": "",
         "user_email": "user@example.com",
         "user_password": "senha123",
@@ -97,7 +99,7 @@
       "settingFollowRedirects": "global",
       "description": "Login de usuário comum. Token é salvo automaticamente em 'auth_token'.",
       "parentId": "fld_setup_auth",
-      "afterResponseScript": "const response = await insomnia.response.json();\nif (response && response.token) {\n  await insomnia.environment.set('auth_token', response.token);\n  console.log('✅ Token de usuário salvo em auth_token');\n} else {\n  console.log('❌ Erro: Token não encontrado na resposta');\n}"
+      "afterResponseScript": "const response = await insomnia.response.json();\nif (response && response.access_token) {\n  await insomnia.environment.set('auth_token', response.access_token);\n  console.log('✅ Access token de usuário salvo em auth_token');\n  if (response.refresh_token) {\n    await insomnia.environment.set('refresh_token', response.refresh_token);\n    console.log('✅ Refresh token salvo em refresh_token');\n  }\n} else if (response && response.token) {\n  // Compatibilidade com versão antiga\n  await insomnia.environment.set('auth_token', response.token);\n  console.log('✅ Token de usuário salvo em auth_token (formato antigo)');\n} else {\n  console.log('❌ Erro: Token não encontrado na resposta');\n}"
     },
     {
       "_id": "req_login_admin",
@@ -127,7 +129,7 @@
       "settingFollowRedirects": "global",
       "description": "Login de administrador. Token é salvo automaticamente em 'admin_token'.",
       "parentId": "fld_setup_auth",
-      "afterResponseScript": "const response = await insomnia.response.json();\nif (response && response.token) {\n  await insomnia.environment.set('admin_token', response.token);\n  console.log('✅ Token de admin salvo em admin_token');\n} else {\n  console.log('❌ Erro: Token não encontrado na resposta');\n}"
+      "afterResponseScript": "const response = await insomnia.response.json();\nif (response && response.access_token) {\n  await insomnia.environment.set('admin_token', response.access_token);\n  console.log('✅ Access token de admin salvo em admin_token');\n  if (response.refresh_token) {\n    await insomnia.environment.set('admin_refresh_token', response.refresh_token);\n    console.log('✅ Refresh token de admin salvo em admin_refresh_token');\n  }\n} else if (response && response.token) {\n  // Compatibilidade com versão antiga\n  await insomnia.environment.set('admin_token', response.token);\n  console.log('✅ Token de admin salvo em admin_token (formato antigo)');\n} else {\n  console.log('❌ Erro: Token não encontrado na resposta');\n}"
     },
     {
       "_id": "req_register",
@@ -182,6 +184,121 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "description": "Logout (adiciona token à blacklist)",
+      "parentId": "fld_setup_auth"
+    },
+    {
+      "_id": "req_refresh_token",
+      "_type": "request",
+      "name": "Refresh Token (auto-save)",
+      "url": "{{ _.base_url }}/auth/refresh",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"refresh_token\": \"{{ _.refresh_token }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Renova o access token usando refresh token. Implementa token rotation.",
+      "parentId": "fld_setup_auth",
+      "afterResponseScript": "const response = await insomnia.response.json();\nif (response && response.access_token) {\n  await insomnia.environment.set('auth_token', response.access_token);\n  console.log('✅ Novo access token salvo em auth_token');\n  if (response.refresh_token) {\n    await insomnia.environment.set('refresh_token', response.refresh_token);\n    console.log('✅ Novo refresh token salvo em refresh_token');\n  }\n} else {\n  console.log('❌ Erro: Tokens não encontrados na resposta');\n}"
+    },
+    {
+      "_id": "req_list_devices",
+      "_type": "request",
+      "name": "List Active Devices",
+      "url": "{{ _.base_url }}/auth/devices",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 6,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Lista todos os dispositivos ativos do usuário",
+      "parentId": "fld_setup_auth"
+    },
+    {
+      "_id": "req_revoke_token",
+      "_type": "request",
+      "name": "Revoke Specific Token",
+      "url": "{{ _.base_url }}/auth/revoke",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n\t\"refresh_token\": \"{{ _.refresh_token }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 7,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Revoga um refresh token específico (logout de um dispositivo)",
+      "parentId": "fld_setup_auth"
+    },
+    {
+      "_id": "req_revoke_all_tokens",
+      "_type": "request",
+      "name": "Revoke All Tokens",
+      "url": "{{ _.base_url }}/auth/revoke-all",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.auth_token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 8,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "description": "Revoga todos os refresh tokens do usuário (logout de todos os dispositivos)",
       "parentId": "fld_setup_auth"
     },
     {

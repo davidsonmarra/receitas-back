@@ -11,6 +11,7 @@ import (
 
 	"github.com/davidsonmarra/receitas-app/internal/models"
 	"github.com/davidsonmarra/receitas-app/internal/server"
+	"github.com/davidsonmarra/receitas-app/pkg/auth"
 	"github.com/davidsonmarra/receitas-app/pkg/database"
 	"github.com/davidsonmarra/receitas-app/pkg/log"
 )
@@ -52,12 +53,16 @@ func main() {
 		&models.Ingredient{},
 		&models.RecipeIngredient{},
 		&models.Rating{},
+		&models.RefreshToken{},
 	); err != nil {
 		log.Error("failed to migrate database", "error", err)
 		os.Exit(1)
 	}
 
 	log.Info("database connected successfully")
+
+	// Iniciar job de limpeza de refresh tokens expirados (a cada 24 horas)
+	auth.StartRefreshTokenCleanup(24 * time.Hour)
 
 	// Configuração da porta (lê de PORT env var ou usa 8080)
 	port := getPort()

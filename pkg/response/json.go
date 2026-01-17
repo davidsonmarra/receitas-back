@@ -28,6 +28,17 @@ func Error(w http.ResponseWriter, statusCode int, message string) {
 	})
 }
 
+// ErrorWithCode escreve uma resposta de erro em JSON com código de erro específico
+func ErrorWithCode(w http.ResponseWriter, statusCode int, message string, code string) {
+	JSON(w, statusCode, map[string]interface{}{
+		"error": map[string]string{
+			"title":   "Ops, algo deu errado!",
+			"message": message,
+			"code":    code,
+		},
+	})
+}
+
 // ValidationError escreve uma resposta de erro de validação no formato amigável
 func ValidationError(w http.ResponseWriter, message string) {
 	JSON(w, http.StatusBadRequest, map[string]interface{}{

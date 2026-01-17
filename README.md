@@ -722,20 +722,38 @@ A validação é realizada em três camadas:
 
 Pacote: [`pkg/validation`](pkg/validation/validator.go)
 
-## 🔐 Autenticação JWT
+## 🔐 Autenticação JWT com Refresh Tokens
 
-A API utiliza **JSON Web Tokens (JWT)** para autenticação de usuários. Tokens expiram em 24 horas e podem ser invalidados através do logout.
+A API utiliza **JSON Web Tokens (JWT)** com sistema de **refresh tokens** para autenticação segura e conveniente.
+
+### Arquitetura
+
+- **Access Token**: Expira em 15 minutos (configurável)
+- **Refresh Token**: Expira em 30 dias (configurável)
+- **Token Rotation**: Cada refresh gera um novo refresh token
+- **Device Management**: Controle de dispositivos ativos
+- **Security**: Tokens armazenados como SHA256 hash no banco
 
 ### Configuração
 
-Defina a variável de ambiente `JWT_SECRET` com uma string longa e aleatória:
+Defina as variáveis de ambiente:
 
 ```bash
-# Desenvolvimento
+# JWT Secret (obrigatório)
 export JWT_SECRET="desenvolvimento-secret-nao-usar-em-producao-12345"
+
+# Duração dos tokens (opcional, em minutos)
+export ACCESS_TOKEN_DURATION=15           # 15 minutos (padrão)
+export REFRESH_TOKEN_DURATION=43200       # 30 dias (padrão)
+
+# Segurança (opcional)
+export MAX_REFRESH_TOKENS_PER_USER=5      # Limite de dispositivos
+export ENABLE_DEVICE_FINGERPRINT=true     # Validar dispositivo
 
 # Produção (Railway)
 railway variables set JWT_SECRET="$(openssl rand -base64 32)"
+railway variables set ACCESS_TOKEN_DURATION=15
+railway variables set REFRESH_TOKEN_DURATION=43200
 ```
 
 **⚠️ IMPORTANTE**: Use um secret forte e único em produção. Nunca compartilhe ou commite o JWT_SECRET!
@@ -762,12 +780,18 @@ Cadastra um novo usuário e retorna token automaticamente.
     "id": 1,
     "name": "João Silva",
     "email": "joao@example.com",
+    "role": "user",
     "created_at": "2025-12-26T10:00:00Z",
     "updated_at": "2025-12-26T10:00:00Z"
   },
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "rt_abc123def456...",
+  "expires_in": 900,
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
+
+**Nota**: O campo `token` é mantido para compatibilidade, mas use `access_token` e `refresh_token`.
 
 **Validações**:
 - Nome: mínimo 3 caracteres, máximo 100
@@ -793,9 +817,13 @@ Autentica um usuário e retorna token.
     "id": 1,
     "name": "João Silva",
     "email": "joao@example.com",
+    "role": "user",
     "created_at": "2025-12-26T10:00:00Z",
     "updated_at": "2025-12-26T10:00:00Z"
   },
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "rt_abc123def456...",
+  "expires_in": 900,
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
@@ -812,11 +840,18 @@ Autentica um usuário e retorna token.
 
 #### POST /users/logout
 
-Invalida o token atual (requer autenticação).
+Invalida o access token e revoga todos os refresh tokens do usuário (requer autenticação).
 
 **Request Headers**:
 ```
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Request Body** (opcional):
+```json
+{
+  "refresh_token": "rt_abc123def456..."
+}
 ```
 
 **Response** (200 OK):
@@ -826,14 +861,132 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 }
 ```
 
+#### POST /auth/refresh
+
+Renova o access token usando um refresh token válido. Implementa **token rotation** (o refresh token antigo é revogado).
+
+**Request Body**:
+```json
+{
+  "refresh_token": "rt_abc123def456..."
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "rt_xyz789ghi012...",
+  "expires_in": 900
+}
+```
+
+**Erro** (401 Unauthorized):
+```json
+{
+  "error": {
+    "title": "Ops, algo deu errado!",
+    "message": "Refresh token expirado",
+    "code": "REFRESH_TOKEN_EXPIRED"
+  }
+}
+```
+
+**Códigos de erro**:
+- `REFRESH_TOKEN_INVALID`: Token não encontrado ou inválido
+- `REFRESH_TOKEN_EXPIRED`: Token expirou (30 dias)
+- `REFRESH_TOKEN_REVOKED`: Token foi revogado manualmente
+- `DEVICE_MISMATCH`: Dispositivo não reconhecido (se habilitado)
+
+#### POST /auth/revoke
+
+Revoga um refresh token específico (requer autenticação).
+
+**Request Headers**:
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Request Body**:
+```json
+{
+  "refresh_token": "rt_abc123def456..."
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "message": "Token revogado com sucesso"
+}
+```
+
+#### POST /auth/revoke-all
+
+Revoga todos os refresh tokens do usuário - logout de todos os dispositivos (requer autenticação).
+
+**Request Headers**:
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Response** (200 OK):
+```json
+{
+  "message": "Todos os tokens foram revogados com sucesso"
+}
+```
+
+#### GET /auth/devices
+
+Lista todos os dispositivos ativos do usuário (requer autenticação).
+
+**Request Headers**:
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Response** (200 OK):
+```json
+{
+  "devices": [
+    {
+      "id": "uuid-1",
+      "device_name": "iPhone 13",
+      "ip_address": "192.168.1.100",
+      "last_used_at": "2026-01-17T10:30:00Z",
+      "created_at": "2026-01-15T08:00:00Z",
+      "is_current": true
+    },
+    {
+      "id": "uuid-2",
+      "device_name": "iPad",
+      "ip_address": "192.168.1.101",
+      "last_used_at": "2026-01-16T15:00:00Z",
+      "created_at": "2026-01-10T12:00:00Z",
+      "is_current": false
+    }
+  ]
+}
+```
+
 ### Usando Tokens
 
-Para acessar endpoints protegidos, inclua o token no header Authorization:
+Para acessar endpoints protegidos, inclua o **access token** no header Authorization:
 
 ```bash
-curl -H "Authorization: Bearer SEU_TOKEN_AQUI" \
-  http://localhost:8080/users/logout
+curl -H "Authorization: Bearer SEU_ACCESS_TOKEN" \
+  http://localhost:8080/recipes
 ```
+
+### Fluxo de Reauthentication
+
+1. **Login/Register**: Recebe `access_token` (15 min) + `refresh_token` (30 dias)
+2. **Uso normal**: Usa `access_token` em todas as requisições
+3. **Token expira**: API retorna 401 com `code: "TOKEN_EXPIRED"`
+4. **Refresh automático**: Cliente chama `/auth/refresh` com `refresh_token`
+5. **Novos tokens**: Recebe novos `access_token` + `refresh_token`
+6. **Retry**: Retenta requisição original com novo `access_token`
 
 ### Segurança
 
@@ -842,11 +995,20 @@ curl -H "Authorization: Bearer SEU_TOKEN_AQUI" \
 - Nunca retornadas nas respostas
 - Validação de força mínima
 
-✅ **Tokens JWT**:
-- Expiração de 24 horas
+✅ **Access Tokens**:
+- Expiração de 15 minutos (configurável)
+- Tipo "access" validado no middleware
 - Assinados com HS256 (HMAC-SHA256)
 - Blacklist para logout efetivo
-- Claims incluem: user_id, email, exp, iat, nbf
+- Claims incluem: user_id, email, role, token_type, exp, iat, nbf
+
+✅ **Refresh Tokens**:
+- Expiração de 30 dias (configurável)
+- Armazenados como SHA256 hash no banco
+- Token rotation: usado apenas uma vez
+- Device fingerprint validation (opcional)
+- Limite de 5 tokens por usuário
+- Cleanup automático de tokens expirados
 
 ✅ **E-mails**:
 - Índice único no banco

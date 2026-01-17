@@ -23,6 +23,7 @@ func RequireAuth(next http.Handler) http.Handler {
 		// Extrair token do header Authorization
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
+			w.Header().Set("WWW-Authenticate", `Bearer error="invalid_request"`)
 			response.Error(w, http.StatusUnauthorized, "Token não fornecido")
 			return
 		}
@@ -30,20 +31,37 @@ func RequireAuth(next http.Handler) http.Handler {
 		// Remover "Bearer " do início
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		if tokenString == authHeader {
+			w.Header().Set("WWW-Authenticate", `Bearer error="invalid_request"`)
 			response.Error(w, http.StatusUnauthorized, "Formato de token inválido")
 			return
 		}
 
 		// Verificar se o token está na blacklist
 		if auth.IsBlacklisted(tokenString) {
-			response.Error(w, http.StatusUnauthorized, "Token inválido")
+			w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
+			response.ErrorWithCode(w, http.StatusUnauthorized, "Token inválido", "TOKEN_INVALID")
 			return
 		}
 
 		// Validar token
 		claims, err := auth.ValidateToken(tokenString)
 		if err != nil {
-			response.Error(w, http.StatusUnauthorized, "Token inválido")
+			// Verificar se é erro de expiração
+			if strings.Contains(err.Error(), "expired") || strings.Contains(err.Error(), "exp") {
+				w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
+				w.Header().Set("X-Token-Expired", "true")
+				response.ErrorWithCode(w, http.StatusUnauthorized, "Token expirado", "TOKEN_EXPIRED")
+				return
+			}
+			w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
+			response.ErrorWithCode(w, http.StatusUnauthorized, "Token inválido", "TOKEN_INVALID")
+			return
+		}
+
+		// Validar que é um access token (não aceitar refresh tokens)
+		if claims.TokenType != auth.TokenTypeAccess {
+			w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
+			response.ErrorWithCode(w, http.StatusUnauthorized, "Tipo de token inválido", "TOKEN_TYPE_INVALID")
 			return
 		}
 

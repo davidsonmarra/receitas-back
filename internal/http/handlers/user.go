@@ -29,8 +29,13 @@ type LoginRequest struct {
 
 // AuthResponse representa a resposta de autenticação
 type AuthResponse struct {
-	User  models.User `json:"user"`
-	Token string      `json:"token"`
+	User         models.User `json:"user"`
+	AccessToken  string      `json:"access_token"`
+	RefreshToken string      `json:"refresh_token"`
+	ExpiresIn    int         `json:"expires_in"` // em segundos
+	
+	// Manter compatibilidade com versões antigas
+	Token string `json:"token,omitempty"` // Deprecated: usar access_token
 }
 
 // Register cadastra um novo usuário
@@ -82,10 +87,25 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Gerar token JWT (incluindo role)
-	token, err := auth.GenerateToken(user.ID, user.Email, user.Role)
+	// Gerar access token JWT (incluindo role)
+	accessToken, err := auth.GenerateToken(user.ID, user.Email, user.Role)
 	if err != nil {
-		log.ErrorCtx(r.Context(), "failed to generate token", "error", err)
+		log.ErrorCtx(r.Context(), "failed to generate access token", "error", err)
+		response.Error(w, http.StatusInternalServerError, "Erro ao gerar token")
+		return
+	}
+
+	// Gerar refresh token
+	refreshToken, err := auth.CreateRefreshToken(auth.RefreshTokenInfo{
+		UserID:            user.ID,
+		Email:             user.Email,
+		Role:              user.Role,
+		DeviceName:        getDeviceName(r),
+		DeviceFingerprint: getDeviceFingerprint(r),
+		IPAddress:         getClientIP(r),
+	})
+	if err != nil {
+		log.ErrorCtx(r.Context(), "failed to generate refresh token", "error", err)
 		response.Error(w, http.StatusInternalServerError, "Erro ao gerar token")
 		return
 	}
@@ -93,8 +113,11 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	log.InfoCtx(r.Context(), "user registered", "id", user.ID, "email", user.Email, "role", user.Role)
 
 	authResponse := AuthResponse{
-		User:  user,
-		Token: token,
+		User:         user,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    auth.GetAccessTokenDurationSeconds(),
+		Token:        accessToken, // Compatibilidade
 	}
 	response.JSON(w, http.StatusCreated, authResponse)
 }
@@ -134,10 +157,25 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Gerar token JWT (incluindo role)
-	token, err := auth.GenerateToken(user.ID, user.Email, user.Role)
+	// Gerar access token JWT (incluindo role)
+	accessToken, err := auth.GenerateToken(user.ID, user.Email, user.Role)
 	if err != nil {
-		log.ErrorCtx(r.Context(), "failed to generate token", "error", err)
+		log.ErrorCtx(r.Context(), "failed to generate access token", "error", err)
+		response.Error(w, http.StatusInternalServerError, "Erro ao gerar token")
+		return
+	}
+
+	// Gerar refresh token
+	refreshToken, err := auth.CreateRefreshToken(auth.RefreshTokenInfo{
+		UserID:            user.ID,
+		Email:             user.Email,
+		Role:              user.Role,
+		DeviceName:        getDeviceName(r),
+		DeviceFingerprint: getDeviceFingerprint(r),
+		IPAddress:         getClientIP(r),
+	})
+	if err != nil {
+		log.ErrorCtx(r.Context(), "failed to generate refresh token", "error", err)
 		response.Error(w, http.StatusInternalServerError, "Erro ao gerar token")
 		return
 	}
@@ -145,10 +183,18 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	log.InfoCtx(r.Context(), "user logged in", "id", user.ID, "email", user.Email, "role", user.Role)
 
 	authResponse := AuthResponse{
-		User:  user,
-		Token: token,
+		User:         user,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    auth.GetAccessTokenDurationSeconds(),
+		Token:        accessToken, // Compatibilidade
 	}
 	response.JSON(w, http.StatusOK, authResponse)
+}
+
+// LogoutRequest representa a requisição de logout (opcional)
+type LogoutRequest struct {
+	RefreshToken string `json:"refresh_token,omitempty"` // Opcional: revogar token específico
 }
 
 // Logout invalida o token do usuário
@@ -167,15 +213,36 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validar token para obter a expiração
+	// Validar token para obter a expiração e user ID
 	claims, err := auth.ValidateToken(tokenString)
 	if err != nil {
 		response.Error(w, http.StatusUnauthorized, "Token inválido")
 		return
 	}
 
-	// Adicionar à blacklist
+	// Adicionar access token à blacklist
 	auth.AddToBlacklist(tokenString, claims.ExpiresAt.Time)
+
+	// Tentar ler refresh token do body (opcional)
+	var req LogoutRequest
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	// Se refresh token foi fornecido, revogar apenas ele
+	if req.RefreshToken != "" {
+		if err := auth.RevokeRefreshTokenByString(req.RefreshToken); err != nil {
+			log.ErrorCtx(r.Context(), "erro ao revogar refresh token específico", "error", err)
+		} else {
+			log.InfoCtx(r.Context(), "refresh token específico revogado", "user_id", claims.UserID)
+		}
+	} else {
+		// Se não foi fornecido, revogar todos os tokens do usuário
+		// (comportamento mais seguro para logout completo)
+		if err := auth.RevokeAllUserTokens(claims.UserID); err != nil {
+			log.ErrorCtx(r.Context(), "erro ao revogar refresh tokens", "error", err)
+		} else {
+			log.InfoCtx(r.Context(), "todos os refresh tokens revogados", "user_id", claims.UserID)
+		}
+	}
 
 	log.InfoCtx(r.Context(), "user logged out", "user_id", claims.UserID)
 	response.JSON(w, http.StatusOK, map[string]string{"message": "Logout realizado com sucesso"})

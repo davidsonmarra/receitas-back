@@ -10,14 +10,14 @@ import (
 
 	"github.com/davidsonmarra/receitas-app/internal/models"
 	"github.com/davidsonmarra/receitas-app/pkg/database"
+	"github.com/davidsonmarra/receitas-app/test/testdb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestRatingCreation testa a criação de uma avaliação
 func TestRatingCreation(t *testing.T) {
-	setupTestDB(t)
-	defer teardownTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	router := setupRouter()
 
@@ -42,6 +42,9 @@ func TestRatingCreation(t *testing.T) {
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
+	if rec.Code != http.StatusCreated {
+		t.Logf("Rating creation failed: status=%d body=%s", rec.Code, rec.Body.String())
+	}
 	assert.Equal(t, http.StatusCreated, rec.Code)
 
 	var response models.Rating
@@ -56,8 +59,7 @@ func TestRatingCreation(t *testing.T) {
 
 // TestRatingUpdate testa a atualização de uma avaliação (upsert)
 func TestRatingUpdate(t *testing.T) {
-	setupTestDB(t)
-	defer teardownTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	router := setupRouter()
 
@@ -114,8 +116,7 @@ func TestRatingUpdate(t *testing.T) {
 
 // TestRatingValidation testa validações de avaliação
 func TestRatingValidation(t *testing.T) {
-	setupTestDB(t)
-	defer teardownTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	router := setupRouter()
 
@@ -192,8 +193,7 @@ func TestRatingValidation(t *testing.T) {
 
 // TestGetMyRating testa obter a avaliação do usuário logado
 func TestGetMyRating(t *testing.T) {
-	setupTestDB(t)
-	defer teardownTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	router := setupRouter()
 
@@ -244,8 +244,7 @@ func TestGetMyRating(t *testing.T) {
 
 // TestDeleteRating testa a exclusão de uma avaliação
 func TestDeleteRating(t *testing.T) {
-	setupTestDB(t)
-	defer teardownTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	router := setupRouter()
 
@@ -290,8 +289,7 @@ func TestDeleteRating(t *testing.T) {
 
 // TestListRatings testa a listagem de avaliações com paginação
 func TestListRatings(t *testing.T) {
-	setupTestDB(t)
-	defer teardownTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	router := setupRouter()
 
@@ -301,7 +299,7 @@ func TestListRatings(t *testing.T) {
 
 	// Criar múltiplos usuários e avaliações
 	for i := 1; i <= 5; i++ {
-		user := createTestUser(t, fmt.Sprintf("rater%d@test.com", i), "password123", fmt.Sprintf("Rater %d", i))
+		_ = createTestUser(t, fmt.Sprintf("rater%d@test.com", i), "password123", fmt.Sprintf("Rater %d", i))
 		token := loginTestUser(t, router, fmt.Sprintf("rater%d@test.com", i), "password123")
 
 		ratingData := map[string]interface{}{
@@ -345,13 +343,13 @@ func TestListRatings(t *testing.T) {
 
 	data = response["data"].([]interface{})
 	assert.Equal(t, 2, len(data))
-	assert.Equal(t, float64(5), response["total"].(float64))
+	pagination := response["pagination"].(map[string]interface{})
+	assert.Equal(t, float64(5), pagination["total"].(float64))
 }
 
 // TestRatingStats testa as estatísticas de avaliação
 func TestRatingStats(t *testing.T) {
-	setupTestDB(t)
-	defer teardownTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	router := setupRouter()
 
@@ -362,7 +360,7 @@ func TestRatingStats(t *testing.T) {
 	// Criar avaliações com distribuição conhecida
 	scores := []int{5, 5, 5, 4, 4, 3, 2, 1}
 	for i, score := range scores {
-		user := createTestUser(t, fmt.Sprintf("stats_user%d@test.com", i), "password123", fmt.Sprintf("Stats User %d", i))
+		_ = createTestUser(t, fmt.Sprintf("stats_user%d@test.com", i), "password123", fmt.Sprintf("Stats User %d", i))
 		token := loginTestUser(t, router, fmt.Sprintf("stats_user%d@test.com", i), "password123")
 
 		ratingData := map[string]interface{}{
@@ -407,19 +405,18 @@ func TestRatingStats(t *testing.T) {
 
 // TestRecipeWithRatings testa se as receitas incluem informações de rating
 func TestRecipeWithRatings(t *testing.T) {
-	setupTestDB(t)
-	defer teardownTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	router := setupRouter()
 
 	// Criar usuário e receita
-	user := createTestUser(t, "recipe_rating@test.com", "password123", "Recipe Rating User")
-	recipe := createTestRecipe(t, user.ID)
+	recipeOwner := createTestUser(t, "recipe_rating@test.com", "password123", "Recipe Rating User")
+	recipe := createTestRecipe(t, recipeOwner.ID)
 
 	// Criar algumas avaliações
 	scores := []int{5, 4, 5}
 	for i, score := range scores {
-		rater := createTestUser(t, fmt.Sprintf("rater_recipe%d@test.com", i), "password123", fmt.Sprintf("Rater %d", i))
+		_ = createTestUser(t, fmt.Sprintf("rater_recipe%d@test.com", i), "password123", fmt.Sprintf("Rater %d", i))
 		token := loginTestUser(t, router, fmt.Sprintf("rater_recipe%d@test.com", i), "password123")
 
 		ratingData := map[string]interface{}{
@@ -454,8 +451,7 @@ func TestRecipeWithRatings(t *testing.T) {
 
 // TestAdminDeleteRating testa a moderação de avaliações por admin
 func TestAdminDeleteRating(t *testing.T) {
-	setupTestDB(t)
-	defer teardownTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	router := setupRouter()
 
@@ -503,8 +499,7 @@ func TestAdminDeleteRating(t *testing.T) {
 
 // TestRatingsSorting testa ordenação de avaliações
 func TestRatingsSorting(t *testing.T) {
-	setupTestDB(t)
-	defer teardownTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	router := setupRouter()
 
@@ -515,7 +510,7 @@ func TestRatingsSorting(t *testing.T) {
 	// Criar avaliações com scores diferentes
 	scores := []int{1, 5, 3}
 	for i, score := range scores {
-		user := createTestUser(t, fmt.Sprintf("sort_user%d@test.com", i), "password123", fmt.Sprintf("Sort User %d", i))
+		_ = createTestUser(t, fmt.Sprintf("sort_user%d@test.com", i), "password123", fmt.Sprintf("Sort User %d", i))
 		token := loginTestUser(t, router, fmt.Sprintf("sort_user%d@test.com", i), "password123")
 
 		ratingData := map[string]interface{}{
@@ -564,8 +559,7 @@ func TestRatingsSorting(t *testing.T) {
 
 // TestRecipeListSortByRating testa ordenação de receitas por rating
 func TestRecipeListSortByRating(t *testing.T) {
-	setupTestDB(t)
-	defer teardownTestDB(t)
+	testdb.SetupWithCleanup(t)
 
 	router := setupRouter()
 
@@ -583,17 +577,17 @@ func TestRecipeListSortByRating(t *testing.T) {
 	// Recipe3: 4 estrelas
 
 	// Recipe 1
-	rater1 := createTestUser(t, "rater1@test.com", "password123", "Rater 1")
+	_ = createTestUser(t, "rater1@test.com", "password123", "Rater 1")
 	token1 := loginTestUser(t, router, "rater1@test.com", "password123")
 	createRating(t, router, token1, recipe1.ID, 5)
 
 	// Recipe 2
-	rater2 := createTestUser(t, "rater2@test.com", "password123", "Rater 2")
+	_ = createTestUser(t, "rater2@test.com", "password123", "Rater 2")
 	token2 := loginTestUser(t, router, "rater2@test.com", "password123")
 	createRating(t, router, token2, recipe2.ID, 3)
 
 	// Recipe 3
-	rater3 := createTestUser(t, "rater3@test.com", "password123", "Rater 3")
+	_ = createTestUser(t, "rater3@test.com", "password123", "Rater 3")
 	token3 := loginTestUser(t, router, "rater3@test.com", "password123")
 	createRating(t, router, token3, recipe3.ID, 4)
 

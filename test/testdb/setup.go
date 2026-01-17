@@ -3,6 +3,7 @@ package testdb
 import (
 	"context"
 	"net/http"
+	"sync"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -14,20 +15,28 @@ import (
 	"github.com/davidsonmarra/receitas-app/pkg/database"
 )
 
+// testMutex garante que apenas um teste acesse o database.DB global por vez
+var testMutex sync.Mutex
+
 // Setup inicializa um banco de dados SQLite in-memory para testes
 // Retorna uma função de cleanup que deve ser chamada com defer
+// IMPORTANTE: Os testes que usam Setup devem rodar sequencialmente, não em paralelo
 func Setup(t *testing.T) func() {
 	t.Helper()
 
-	// Criar banco SQLite in-memory
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
+	// Adquirir lock para garantir isolamento entre testes
+	testMutex.Lock()
+
+	// Criar banco SQLite in-memory exclusivo para este teste
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
+		testMutex.Unlock()
 		t.Fatalf("falha ao criar banco de testes: %v", err)
 	}
 
-	// Atribuir ao database global
+	// Atribuir ao database global (protegido pelo mutex)
 	database.DB = db
 
 	// Executar migrations
@@ -36,13 +45,18 @@ func Setup(t *testing.T) func() {
 		&models.Recipe{},
 		&models.Ingredient{},
 		&models.RecipeIngredient{},
+		&models.Rating{},
+		&models.RefreshToken{},
 	); err != nil {
+		testMutex.Unlock()
 		t.Fatalf("falha ao executar migrations: %v", err)
 	}
 
 	// Retornar função de cleanup
 	return func() {
 		// Limpar todas as tabelas
+		db.Exec("DELETE FROM refresh_tokens")
+		db.Exec("DELETE FROM ratings")
 		db.Exec("DELETE FROM recipe_ingredients")
 		db.Exec("DELETE FROM recipes")
 		db.Exec("DELETE FROM ingredients")
@@ -56,10 +70,14 @@ func Setup(t *testing.T) func() {
 
 		// Resetar database.DB
 		database.DB = nil
+
+		// Liberar lock para próximo teste
+		testMutex.Unlock()
 	}
 }
 
-// SetupWithCleanup é similar ao Setup mas faz cleanup automático entre testes
+// SetupWithCleanup é similar ao Setup mas faz cleanup automático usando t.Cleanup
+// IMPORTANTE: Os testes que usam SetupWithCleanup devem rodar sequencialmente, não em paralelo
 func SetupWithCleanup(t *testing.T) {
 	cleanup := Setup(t)
 	t.Cleanup(cleanup)

@@ -44,6 +44,24 @@ func Setup() *chi.Mux {
 		r.With(customMiddleware.RequireAuth).Post("/logout", handlers.Logout)
 	})
 
+	// Rotas de autenticação (refresh tokens)
+	r.Route("/auth", func(r chi.Router) {
+		// POST /auth/refresh - renovar access token
+		r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/refresh", handlers.RefreshToken)
+
+		// Rotas protegidas (requerem autenticação)
+		r.With(customMiddleware.RequireAuth).Group(func(r chi.Router) {
+			// POST /auth/revoke - revogar token específico
+			r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/revoke", handlers.RevokeToken)
+
+			// POST /auth/revoke-all - revogar todos os tokens
+			r.With(customMiddleware.RateLimitWrite(rateLimitConfig)).Post("/revoke-all", handlers.RevokeAllTokens)
+
+			// GET /auth/devices - listar dispositivos ativos
+			r.With(customMiddleware.RateLimitRead(rateLimitConfig)).Get("/devices", handlers.ListDevices)
+		})
+	})
+
 	// Rotas de receitas com rate limiting específico
 	r.Route("/recipes", func(r chi.Router) {
 		// Rotas públicas (sem autenticação)

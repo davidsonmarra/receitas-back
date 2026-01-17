@@ -228,17 +228,19 @@ func TestLogin_UserNotFound(t *testing.T) {
 }
 
 func TestLogout_Success(t *testing.T) {
-	// Gerar token válido
-	token, err := auth.GenerateToken(123, "logout@test.com", "user")
-	if err != nil {
-		t.Fatalf("erro ao gerar token: %v", err)
-	}
+	testdb.SetupWithCleanup(t)
+
+	router := setupRouter()
+
+	// Criar usuário e fazer login
+	_ = createTestUser(t, "logout@test.com", "password123", "Logout User")
+	token := loginTestUser(t, router, "logout@test.com", "password123")
 
 	req := httptest.NewRequest("POST", "/users/logout", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 
-	handlers.Logout(rec, req)
+	router.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Errorf("esperado status 200, obteve %d", rec.Code)

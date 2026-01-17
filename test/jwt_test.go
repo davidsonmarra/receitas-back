@@ -75,12 +75,12 @@ func TestValidateToken_Expiration(t *testing.T) {
 		t.Fatalf("erro ao validar token: %v", err)
 	}
 
-	// Verificar que expira em aproximadamente 24 horas
-	expectedExpiration := time.Now().Add(24 * time.Hour)
+	// Verificar que expira na duração configurada (padrão: 15 minutos)
+	expectedExpiration := time.Now().Add(auth.AccessTokenDuration)
 	diff := claims.ExpiresAt.Time.Sub(expectedExpiration)
 
 	// Permitir 1 minuto de diferença (tolerância para execução do teste)
 	if diff > time.Minute || diff < -time.Minute {
-		t.Errorf("expiração incorreta: esperado ~24h, diferença: %v", diff)
+		t.Errorf("expiração incorreta: esperado ~%v, diferença: %v", auth.AccessTokenDuration, diff)
 	}
 }
