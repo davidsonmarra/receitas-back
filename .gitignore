@@ -1,42 +1,45 @@
-# Binários
-bin/
-api
+# Binaries for programs and plugins
 *.exe
+*.exe~
 *.dll
 *.so
 *.dylib
 
-# Arquivos de teste
+# Test binary, built with `go test -c`
 *.test
+
+# Output of the go coverage tool
 *.out
 
-# Dependências
+# Dependency directories
 vendor/
 
-# Build cache do Go
-*.o
-*.a
-*.so
+# Go workspace file
+go.work
 
-# Arquivos de ambiente
+# Environment variables
 .env
 .env.local
+.env.*.local
 
-# IDEs
-.vscode/
+# Backups - NÃO versionar backups do banco de dados
+backups/*.sql
+backups/json/
+backups/**/*.json
+
+# IDE
 .idea/
+.vscode/
 *.swp
 *.swo
 *~
 
-# OS
+# macOS
 .DS_Store
-Thumbs.db
 
 # Logs
 *.log
 
-# Coverage
-*.cover
-coverage.out
-
+# Temporary files
+tmp/
+temp/
